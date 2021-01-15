@@ -1,0 +1,7 @@
+.vscode/
+*.code-workspace
+*.pyc
+__pycache__
+.DS_Store
+*.txt
+ray_results
