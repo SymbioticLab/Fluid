@@ -1,6 +1,6 @@
-# FluidExec: A Generic Resource-Aware Hyperparameter Tuning Execution Engine
+# Fluid: Resource-Aware Hyperparameter Tuning Engine
 
-FluidExec act as an alternative [Ray](https://ray.io) executor.
+Fluid acts as an alternative [Ray](https://ray.io) executor.
 To use it in Ray Tune, pass an instance as an additional keyword argument to `tune.run`:
 
 ```python
