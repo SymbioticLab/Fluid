@@ -1,5 +1,6 @@
 # coding: utf-8
 import json
+import logging
 import unittest
 
 import ray
@@ -19,6 +20,13 @@ from fluid.fluid_executor import FluidExecutor
 
 class FluidExecutorTest(unittest.TestCase):
     def setUp(self):
+        root = logging.getLogger()
+        root.setLevel(logging.INFO)
+        logger = logging.getLogger("ray.tune.registry")
+        logger.setLevel(logging.INFO)
+        logger = logging.getLogger("fluid.fluid_executor")
+        logger.setLevel(logging.DEBUG)
+
         # register the __fake trainable
         _register_all()
         ray.init()
@@ -248,19 +256,3 @@ class LocalModeExecutorTest(FluidExecutorTest):
     def tearDown(self):
         ray.shutdown()
         _register_all()  # re-register the evicted objects
-
-
-if __name__ == "__main__":
-    import logging
-    import sys
-
-    import pytest
-
-    root = logging.getLogger()
-    root.setLevel(logging.INFO)
-    logger = logging.getLogger("fluid.fluid_executor")
-    logger.setLevel(logging.DEBUG)
-    logger = logging.getLogger("ray.tune.registry")
-    logger.setLevel(logging.INFO)
-    sys.exit(pytest.main(["-x", "-v", "--ff", __file__]))
-    # sys.exit(pytest.main())

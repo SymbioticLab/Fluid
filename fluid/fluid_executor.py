@@ -141,7 +141,7 @@ class FluidExecutor(TrialExecutor):
 
         if assigned:
             # find each group with pending jobs and do dynamic
-            groups = {self._find_group(p.trial.trial_id) for p in assigned}
+            groups = {self._find_group(p.trial) for p in assigned}
             for meta in groups:
                 self._dynamic_fluid(meta)
         else:
