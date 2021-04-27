@@ -1,3 +1,42 @@
+[tool.poetry]
+name = "fluidexec"
+version = "0.1.0"
+license = "Apache-2.0"
+authors = ["Peifeng <peifeng@umich.edu>"]
+readme = "README.md"
+repository = "https://github.com/SymbioticLab/fluid"
+
+packages = [
+    { include = "fluid" },
+    { include = "workloads", format = "sdist" },
+]
+include = [
+    "LINCENSE"
+]
+
+[tool.poetry.dependencies]
+python = "3.*"
+numpy = "*"
+ray[tune] = "0.8.5"
+
+# optional dependencies used by exp workloads
+requests = { version = { version = "*", optional = true }, optional = true }
+hpbandster = { version = "*", optional = true }
+ConfigSpace = { version = "*", optional = true }
+pandas = { version = "*", optional = true }
+
+[tool.poetry.extras]
+exp = [
+    "requests",
+    "hpbandster",
+    "ConfigSpace",
+    "pandas",
+]
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2"
+flake8 = "*"
+
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

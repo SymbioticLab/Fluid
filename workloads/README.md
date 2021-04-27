@@ -1,5 +1,22 @@
 # Experiments in Paper
 
+## Clone the Repo
+To run experiments, it is necessary to clone this repo, instad of installing `fluid` from PyPI.
+
+`fluid` uses [`poetry`](https://python-poetry.org) to manage its dependencies, so `poetry` has to be
+installed first.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+git clone https://github.com/SymbioticLab/fluid
+cd fluid
+poetry install --extras "exp"
+poetry shell
+```
+
+The last command spawns a new shell within the virtual environment just created with all dependencies
+installed.
+
 ## Setup a Minimal Ray Cluster
 [`cluster.yaml`](cluster.yaml) provides an example Ray cluster config file that you can use as the starting point to bring up a Ray cluster.
 
