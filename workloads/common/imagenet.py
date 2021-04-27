@@ -102,7 +102,7 @@ def data_creator(config):
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-         pin_memory=True, sampler=train_sampler, shuffle=True )
+         pin_memory=True, sampler=train_sampler)
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
@@ -111,7 +111,7 @@ def data_creator(config):
             transforms.ToTensor(),
             normalize,
         ])),
-        batch_size=args.batch_size, shuffle=False, pin_memory=True, shuffle=True )
+        batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
 
 

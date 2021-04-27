@@ -29,7 +29,7 @@ tune.run(
 
 
 ## Reproduce Experiments
-See the [README](workloads/README.md) in `workloads` for more information.
+See the README in [`workloads`](workloads/) for more information.
 
 
 ## Notes
