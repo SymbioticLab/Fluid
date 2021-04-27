@@ -7,3 +7,4 @@ __pycache__
 ray_results
 setup.py
 setup.cfg
+dist/

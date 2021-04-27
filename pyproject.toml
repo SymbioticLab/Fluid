@@ -5,6 +5,7 @@ license = "Apache-2.0"
 authors = ["Peifeng <peifeng@umich.edu>"]
 readme = "README.md"
 repository = "https://github.com/SymbioticLab/fluid"
+description = "Resource-aware hyperparameter tuning execution engine"
 
 packages = [
     { include = "fluid" },
@@ -15,19 +16,19 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "3.*"
+python = "~3.6"
+
+ray = {version = "0.8.5", extras = ["tune"]}
 numpy = "*"
-ray[tune] = "0.8.5"
+requests = "*"
 
 # optional dependencies used by exp workloads
-requests = { version = { version = "*", optional = true }, optional = true }
 hpbandster = { version = "*", optional = true }
 ConfigSpace = { version = "*", optional = true }
 pandas = { version = "*", optional = true }
 
 [tool.poetry.extras]
 exp = [
-    "requests",
     "hpbandster",
     "ConfigSpace",
     "pandas",
@@ -40,3 +41,9 @@ flake8 = "*"
 [build-system]
 requires = ["poetry_core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
+log_level = "DEBUG"
