@@ -16,7 +16,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "~3.6"
+python = ">=3.6"
 
 ray = {version = "0.8.5", extras = ["tune"]}
 numpy = "*"

@@ -1,7 +1,7 @@
 # Fluid: Resource-Aware Hyperparameter Tuning Engine
 
 [![PyPI version](https://img.shields.io/pypi/v/fluidexec.svg)](https://pypi.org/project/fluidexec)
-[![Build Status](https://github.com/SymbioticLab/fluid/actions/workflows/python-package/badge.svg?event=release)](https://github.com/SymbioticLab/fluid/actions)
+[![Python package](https://github.com/SymbioticLab/Fluid/actions/workflows/python-package.yml/badge.svg?event=release)](https://github.com/SymbioticLab/Fluid/actions/workflows/python-package.yml)
 
 `Fluid` is an alternative [Ray](https://ray.io) executor that intelligently manages trial executions on behalf of hyperparameter tuning algorithms, in order to increase the resource utilization, and improve end-to-end makespan.
 
