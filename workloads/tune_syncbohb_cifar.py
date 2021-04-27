@@ -26,13 +26,13 @@ DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, 'tune_')
 
 def setup_tune_scheduler(num_worker):
-    
+
     # BOHB uses ConfigSpace for their hyperparameter search space
     config_space = workload.create_ch()
-    
+
     experiment_metrics = workload.exp_metric()
-    bohb_search = TuneBOHB(config_space, **experiment_metrics)  
-    
+    bohb_search = TuneBOHB(config_space, **experiment_metrics)
+
     bohb_hyperband = SyncBOHB(
         time_attr="training_iteration",
         max_t=81,
@@ -48,9 +48,9 @@ def setup_tune_scheduler(num_worker):
 
 def main():
     eta, sd = com.init_ray()
-    
+
     eta = 3 if eta == 1 else eta
-    
+
     MyTrainable_sync = TorchTrainer.as_trainable(
         data_creator=workload.data_creator,
         model_creator=workload.model_creator,
@@ -70,7 +70,7 @@ def main():
     }
 
     analysis = tune.run(
-        MyTrainable_sync,  
+        MyTrainable_sync,
         **params
     )
 

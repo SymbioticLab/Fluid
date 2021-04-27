@@ -28,7 +28,7 @@ class PerfManager:
         self.perf_infos: Dict[str, TrialPerf] = {}
 
         # TODO: find a way to pass budget info from algo to here
-    
+
     @property
     def trials_missing_info(self) -> Set[str]:
         """Return set of trial ids that are missing perf info

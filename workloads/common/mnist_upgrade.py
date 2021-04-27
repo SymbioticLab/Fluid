@@ -29,7 +29,7 @@ class DNN(nn.Module):
         self.dropout = nn.Dropout2d(float(config['drop_out']))
         self.fc2 = nn.Linear( int(config['hidden_layer1']), int(config['hidden_layer2'] ))
         self.fc = nn.Linear( int(config['hidden_layer2']), 10)
-        
+
     def forward(self, x):
         x = x.view(-1, 28*28)
         x = F.relu(self.fc1(x))
@@ -49,7 +49,7 @@ class CNN(nn.Module):
         self.dropout2 = nn.Dropout2d(0.5)
         self.fc1 = nn.Linear(9216, int(config['hidden_layer2']))
         self.fc2 = nn.Linear(int(config['hidden_layer2']), 10)
-        
+
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)

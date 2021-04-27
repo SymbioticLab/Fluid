@@ -19,9 +19,9 @@ def create_grid_search_space(exp_no):
         key: tune.sample_from(val)
         for key, val in mutations.items()
     }
- 
-    
-    
+
+
+
 def setup_tune_scheduler(exp_no):
 
     search_space =  create_grid_search_space(exp_no)
@@ -40,7 +40,7 @@ def setup_tune_scheduler(exp_no):
 
 
 def main():
-    exp, sd = com.init_ray() 
+    exp, sd = com.init_ray()
     workload.init_dcgan()
 
     MyTrainable = TorchTrainer.as_trainable(

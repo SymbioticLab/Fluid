@@ -7,13 +7,13 @@ Created on Wed Aug 12 14:10:09 2020
 """
 
 from pathlib import Path
- 
+
 from ray.util.sgd.utils import BATCH_SIZE
 from ray import tune
 
 import workloads.common as com
 from workloads.common import mnist_upgrade as workload
-import torch 
+import torch
 import torch.nn as nn
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()
@@ -22,7 +22,7 @@ EXP_NAME = com.remove_prefix(Path(__file__).stem, 'tune_')
 EPOCH_SIZE = 512
 TEST_SIZE = 256
 
- 
+
 def create_grid_space():
     # median variance
     # number of sample : 81
@@ -81,7 +81,7 @@ def train_mnist(config):
     train_loader, test_loader = workload.data_creator(config)
     model = workload.model_creator(config)
     optimizer = workload.optimizer_creator(model, config)
-    
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     acc = 0
@@ -91,14 +91,14 @@ def train_mnist(config):
         if i % 10 == 0 :
             print("Train epoch ", i, " | Test accuaracy: " , acc)
         # track.log(mean_accuracy=acc)
-        
+
 
 def setup_tune_scheduler():
     search_space =  create_grid_search_space()
     return dict(
-        config=search_space, 
+        config=search_space,
     )
-    
+
 def main():
     _, sd = com.init_ray()
     analysis = tune.run(

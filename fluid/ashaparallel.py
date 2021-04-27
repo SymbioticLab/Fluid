@@ -6,14 +6,14 @@ Created on Mon Jul 13 04:16:34 2020
 @author: liujiachen
 """
 import logging
-import numpy as np 
+import numpy as np
 import ray
 from ray.tune.trial import Trial
-from ray.tune.schedulers import  AsyncHyperBandScheduler 
+from ray.tune.schedulers import  AsyncHyperBandScheduler
 logger = logging.getLogger(__name__)
 
 
-import os 
+import os
 def sched_algo():
     return int(os.environ.get("NUM_WORKER", 8))
 
@@ -31,4 +31,4 @@ class AsyncHyperBandSchedulerWithParalelism(AsyncHyperBandScheduler):
                     and trial_runner.has_resources(trial.resources)):
                 if np.sum(list(map(lambda x: x.status == Trial.RUNNING, trial_runner.get_trials()))) < sched_algo() :
                     return trial
-        return None    
+        return None

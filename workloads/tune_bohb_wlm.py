@@ -39,9 +39,9 @@ def setup_tune_scheduler():
 
 def main():
     eta, sd = com.init_ray()
-    
+
     eta = 3 if eta == 1 else eta
-    
+
     MyTrainable = TorchTrainer.as_trainable(
         data_creator=workload.data_creator,
         model_creator=workload.model_creator,

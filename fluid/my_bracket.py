@@ -62,7 +62,7 @@ class Bracket:
         # track progress for fair scheduling
         self._completed_progress = 0
         self._total_work = 0
-        
+
         # pre-compute each rung's n and r
         n = max_trials
         r = init_res
@@ -73,7 +73,7 @@ class Bracket:
             self._rungs.append(rung)
             n = int(np.ceil(n / eta))
             r = int(min(r * eta, max_res ))
-        
+
         self._halves = s
 
     '''
@@ -95,10 +95,10 @@ class Bracket:
 
     def _add_trial_to_rung(self, trial: Trial, rung: RungParam):
         assert not self.filled(rung.idx), "Cannot add trial to filled bracket!"
-        
+
         self._rungs[rung.idx] = self._rungs[rung.idx] ._replace(added = rung.added+1)
         self._live_trials[trial]= self._live_trials[trial]._replace(rung = rung.idx)
-        
+
     def filled(self, rung_idx: int = 0):
         """Checks if bracket is filled.
 
@@ -130,7 +130,7 @@ class Bracket:
 
     def current_trials(self):
         return list(self._live_trials)
-    
+
 
     def cleanup_rungs(self) -> List[Trial]:
         """Return any trial that need to be terminated
@@ -164,23 +164,23 @@ class Bracket:
                 for t in self.trials_in_rung(rung.idx)
                 if not self.continue_trial(t)
             ]
-            
+
             # print("<<trial done: ", trials_done," / ", rung.n )
             if self.filled(rung.idx + 1) or len(trials_done) == 0 :
                 continue
-            
+
             nxt_trials_launch = [
                 t
                 for t in self.trials_in_rung(rung.idx + 1)
             ]
-            
+
             if len(nxt_trials_launch) >= self._rungs[ rung.idx + 1 ].n:
                 continue
-            
+
             next_n = min( self._rungs[rung.idx + 1].n, self._n / (self._eta ** (rung.idx+1) ))
             cur_n =  min(rung.n  , self._n / (self._eta ** rung.idx))
             num_promotable = int( len(trials_done) - round(cur_n - next_n))
-            
+
             if num_promotable <= 0:
                 continue
             # sort in asc order, good ones are the last num_promotable trials
@@ -189,9 +189,9 @@ class Bracket:
                 key=lambda t: metric_op * self._live_trials[t].result[metric])
             promotables += sorted_trials[-num_promotable:]
             bad += sorted_trials[:-num_promotable]
-        return promotables, bad 
+        return promotables, bad
 
-    
+
     def promote(self, trial: Trial):
         next_idx = self._live_trials[trial].rung + 1
         new_rung = self._rungs[next_idx]
@@ -211,9 +211,9 @@ class Bracket:
             self._get_result_time(self._live_trials[trial].result)
         assert delta >= 0, (result, self._live_trials[trial])
         self._completed_progress += delta
-        
+
         self._live_trials[trial]= self._live_trials[trial]._replace(result=result)
-        
+
     def cleanup_trial(self, trial):
         """Clean up statistics tracking for terminated trials (either by force
         or otherwise).
@@ -260,5 +260,4 @@ class Bracket:
 
     def sort_by_runtime(self):
         self._live_trials = dict(sorted(self._live_trials.items(), key=lambda x:x[1].result[TIME_THIS_ITER_S], reverse=True))
-        
-        
+

@@ -64,7 +64,7 @@ class MyTrainableClass(Trainable):
         return {"mean_accuracy": acc}
 
     def _save(self, checkpoint_dir):
-        
+
         import os
         path = os.path.join(checkpoint_dir, "model.pth")
         torch.save(self.model.state_dict(), path)
@@ -84,12 +84,12 @@ def init_ray():
 def main():
     try:
         init_ray()
-    
+
         search_space = {
             "lr": tune.sample_from(lambda spec: 10**(-10 * np.random.rand())),
             "momentum": tune.uniform(0.1, 0.9)
         }
-    
+
         analysis = tune.run(
             MyTrainableClass,
             trial_executor = MyRayTrialExecutor(),
@@ -98,7 +98,7 @@ def main():
             #scheduler=ASHAScheduler(metric="mean_accuracy", mode="max"),
             config=search_space
         )
-    
+
         dfs = analysis.trial_dataframes
         for logdir, df in dfs.items():
             ld = Path(logdir)

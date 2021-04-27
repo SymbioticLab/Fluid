@@ -5,7 +5,7 @@ Created on Sat Jun 20 22:49:12 2020
 
 @author: liujiachen
 """
- 
+
 import tensorflow as tf
 try:
     tf.get_logger().setLevel('INFO')
@@ -50,9 +50,9 @@ def train_mnist(config):
         tune.track.log(mean_accuracy=acc) #here
         if i % 5 == 0:
             torch.save(model, "./model.pth") # This saves the model to the trial directory
-            
-            
-            
+
+
+
 # This is a HyperOpt specific hyperparameter space configuration.
 space = {
     "lr": hp.loguniform("lr", -10, -1),
@@ -64,10 +64,10 @@ space = {
 hyperopt_search = HyperOptSearch(space, max_concurrent=1, metric="mean_accuracy", mode="max")
 
 # We Remove the dir so that we can visualize tensorboard correctly
-# ! rm -rf ~/ray_results/search_algorithm 
+# ! rm -rf ~/ray_results/search_algorithm
 
 
-# ray.shutdown()  # Restart Ray defensively in case the ray connection is lost. 
+# ray.shutdown()  # Restart Ray defensively in case the ray connection is lost.
 
 ray.init(address='auto')
 # ray.init(num_gpus=6)
@@ -77,10 +77,10 @@ custom_scheduler =ASHAScheduler(
     grace_period=1,
 )
 analysis = tune.run(
-    train_mnist, 
-    search_alg=hyperopt_search, 
-    scheduler=custom_scheduler, 
-    num_samples=10,  
+    train_mnist,
+    search_alg=hyperopt_search,
+    scheduler=custom_scheduler,
+    num_samples=10,
     resources_per_trial={"gpu":1},
     verbose=1,
     name="use_gpu"  # This is used to specify the logging directory.

@@ -32,7 +32,7 @@ def setup_tune_scheduler():
         num_samples=10,
         resources_per_trial=com.detect_baseline_resource(),
     )
-    
+
 
 
 def main():

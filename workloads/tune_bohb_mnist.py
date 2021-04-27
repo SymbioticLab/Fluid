@@ -4,7 +4,7 @@ from ray.tune.suggest.bohb import TuneBOHB
 from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.util.sgd.utils import BATCH_SIZE
 from ray import tune
- 
+
 from fluid.trainer import TorchTrainer
 
 import workloads.common as com

@@ -42,7 +42,7 @@ def setup_tune_scheduler():
 
 def main():
     _, sd = com.init_ray()
-    
+
     MyTrainable = TorchTrainer.as_trainable(
         data_creator=workload.data_creator,
         model_creator=workload.model_creator,

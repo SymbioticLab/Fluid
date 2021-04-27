@@ -33,13 +33,13 @@ def setup_tune_scheduler():
         config=search_space,
         resources_per_trial=com.detect_baseline_resource(),
     )
-    
+
 
 
 def main():
     eta, sd = com.init_ray()
 
-    
+
     MyTrainable = TorchTrainer.as_trainable(
         data_creator=workload.data_creator,
         model_creator=workload.model_creator,
@@ -59,7 +59,7 @@ def main():
     }
 
     analysis = tune.run(
-        MyTrainable,  
+        MyTrainable,
         **params
     )
 

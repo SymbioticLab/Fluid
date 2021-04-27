@@ -7,22 +7,25 @@ Created on Wed Jun 10 15:02:14 2020
 """
 from __future__ import annotations
 
-import logging 
+import os
+import logging
 import numpy as np
 from ray.tune.trial import Trial
 from ray.tune.error import TuneError
-from ray.tune.result import TIME_THIS_ITER_S ,TRAINING_ITERATION
-from ray.tune.schedulers import  HyperBandForBOHB
+from ray.tune.result import TIME_THIS_ITER_S, TRAINING_ITERATION
+from ray.tune.schedulers import HyperBandForBOHB
 
-from typing import NamedTuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List, Optional, TypedDict, Tuple, Union, Dict, Set
-import os 
-def sched_algo():
-    return int(os.environ.get("NUM_WORKER", 4))
+    from typing import List, Optional, TypedDict, Tuple, Union, Dict, Set, NamedTuple
 
 
 logger = logging.getLogger(__name__)
+
+
+def sched_algo():
+    return int(os.environ.get("NUM_WORKER", 4))
+
 
 # Implementation notes:
 #    Synchronous BOHB

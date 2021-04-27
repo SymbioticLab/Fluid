@@ -12,7 +12,7 @@ from workloads import grid_search_space as space
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, 'tune_')
- 
+
 def create_grid_search_space(exp_no):
 #     mutations = space.create_grid_space_1()
     method_name='space.create_grid_space_'+str(exp_no)
@@ -21,8 +21,8 @@ def create_grid_search_space(exp_no):
         key: tune.sample_from(val)
         for key, val in mutations.items()
     }
- 
-    
+
+
 def setup_tune_scheduler(exp_no):
     search_space =  create_grid_search_space(exp_no)
     sync_to_driver = not RESULTS_PATH.startswith('/nfs')

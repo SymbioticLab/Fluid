@@ -14,7 +14,7 @@ from ray import tune
 from ray.util.sgd.utils import BATCH_SIZE
 import torch
 
-import workloads.common as com 
+import workloads.common as com
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 
 
@@ -70,13 +70,13 @@ class CNN(nn.Module):
 
     def forward(self, x):
         """Perform forward."""
-        
+
         # conv layers
         x = self.conv_layer(x)
-        
+
         # flatten
         x = x.view(x.size(0), -1)
-        
+
         # fc layer
         x = self.fc_layer(x)
 
@@ -91,7 +91,7 @@ def exp_metric():
 def create_stopper():
     return com.MetricStopper(0.9, **exp_metric())
 
-def data_creator(config): 
+def data_creator(config):
     print('==> Preparing data..')
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -99,7 +99,7 @@ def data_creator(config):
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
-    
+
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
@@ -114,7 +114,7 @@ def data_creator(config):
         DATA_PATH, train=False, download=True, transform=transform_test)
     test_loader = torch.utils.data.DataLoader(
         testset, batch_size=64 , shuffle=True )
-    
+
 #    classes = ('plane', 'car', 'bird', 'cat', 'deer',
 #               'dog', 'frog', 'horse', 'ship', 'truck')
     return train_loader, test_loader
@@ -155,7 +155,7 @@ def create_sample_space():
 
 
 
- 
+
 def create_search_space():
     mutations, cap_explore = create_sample_space()
     return {

@@ -22,8 +22,8 @@ def create_grid_search_space(exp_no):
         key: tune.sample_from(val)
         for key, val in mutations.items()
     }
- 
-    
+
+
 def setup_tune_scheduler(exp_no):
     search_space =  create_grid_search_space(exp_no)
     sync_to_driver = not RESULTS_PATH.startswith('/nfs')
@@ -37,11 +37,11 @@ def setup_tune_scheduler(exp_no):
         local_dir=RESULTS_PATH,
         name = EXP_NAME+str(exp_no),
     )
-    
+
 
 
 def main():
-    exp, sd = com.init_ray() 
+    exp, sd = com.init_ray()
 
     MyTrainable = TorchTrainer.as_trainable(
         data_creator=workload.data_creator,

@@ -750,7 +750,7 @@ class BaseTorchTrainable(Trainable):
         seed = config.get('seed')
         if seed is not None:
             np.random.seed(seed)
-            random.seed(seed)    
+            random.seed(seed)
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
 

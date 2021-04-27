@@ -23,7 +23,6 @@ from ray.tune.trainable import TrainableUtil
 from ray.tune.result import TRIAL_INFO
 from ray.tune.ray_trial_executor import _TrialCleanup, _to_gb, _LocalWrapper
 from ray.tune.logger import NoopLogger
-from ray.tune.error import TuneError
 from ray.tune.result import TIME_THIS_ITER_S, TRAINING_ITERATION
 from typing import NamedTuple
 
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DEFAULT_GET_TIMEOUT = 60.0  # seconds
+
 
 class PendingJob(NamedTuple):
     trial: Trial
@@ -101,7 +101,7 @@ class FluidExecutor(TrialExecutor):
         # trialgroup assignment,
         # mapping from trial_id to group num
         self.trial_groups: Dict[str, TrialAndGroup] = {}
-    
+
     @property
     def num_trial_groups(self) -> int:
         return len(self.trial_group_meta)
@@ -123,12 +123,12 @@ class FluidExecutor(TrialExecutor):
             self.trial_group_meta.append(meta)
             logger.debug('Assign group %d to unassigned trials: %s', meta.grp, unassigned)
             for p in unassigned:
-                self.trial_groups[p.trial.trial_id] = TrialAndGroup(p.trial, grp)
+                self.trial_groups[p.trial.trial_id] = TrialAndGroup(p.trial, meta.grp)
             # allocate reousrces
             self._static_fluid(meta)
         else:
             logger.debug('No new group')
-        
+
         if assigned:
             # find each group with pending jobs and do dynamic
             groups = {
@@ -139,7 +139,7 @@ class FluidExecutor(TrialExecutor):
                 self._dynamic_fluid(meta)
         else:
             logger.debug('No change in existing groups')
-        
+
         # down with the pending, clear it
         self.jobs_pending.clear()
 
@@ -222,7 +222,7 @@ class FluidExecutor(TrialExecutor):
                     np.floor(
                         H1 * np.size(H1) / np.sum(H1)
                     ),
-                1 / c),
+                    1 / c),
                 d
             )
             # write to W
@@ -252,7 +252,7 @@ class FluidExecutor(TrialExecutor):
 
         # TODO: step 2. for every running, adjust resource
         # TODO: step 3. call _kickoff for every pending, note that it may be None if failed to start
-    
+
     def _ensure_W(self, W: np.array):
         """Adjust group resources given in W"""
         # stop any trials with 0 res
@@ -293,7 +293,7 @@ class FluidExecutor(TrialExecutor):
         for _, job in self.jobs_running.items():
             if job.trial == trial:
                 return job
-    
+
     def _find_pending(self, trial) -> Optional[PendingJob]:
         for job in self.jobs_pending:
             if job.trial == trial:
@@ -417,7 +417,7 @@ class FluidExecutor(TrialExecutor):
         """
         if stop_logger:
             trial.close_logger()
-        
+
         prior_status = trial.status
         self.set_status(trial, Trial.ERROR if error else Trial.TERMINATED)
         trial.set_location(Location())
@@ -454,7 +454,7 @@ class FluidExecutor(TrialExecutor):
     def has_resources(self, resources):
         """Tell the schedule algorithm to always submit trials to us"""
         return True
-    
+
     def start_trial(self, trial, checkpoint=None, train=True):
         """Add to pending queue and reschedule"""
         logger.debug('start_trial %s', trial)
@@ -490,7 +490,7 @@ class FluidExecutor(TrialExecutor):
             self.jobs_paused[running.in_flight_future] = running
         # the super impl will call stop trial, which will then remove the job from running queue
         super().pause_trial(trial)
-    
+
     def unpause_trial(self, trial):
         logger.debug('unpause_trial %s', trial)
         super().unpause_trial(trial)
@@ -525,14 +525,13 @@ class FluidExecutor(TrialExecutor):
                     DEFAULT_GET_TIMEOUT
                 )
             except RayTimeoutError:
-                logger.exception("Trial %s: reset_config timed out.",
-                                    trial)
+                logger.exception("Trial %s: reset_config timed out.", trial)
                 return False
         return reset_val
-    
+
     def get_running_trials(self):
         return [job.trial for job in self.jobs_running.values()]
-    
+
     def get_next_available_trial(self) -> Trial:
         """Return the next trial with ready result.
         Note that this doesn't remove the trial from running, fetch_result does that
@@ -543,7 +542,7 @@ class FluidExecutor(TrialExecutor):
         random.shuffle(futures)
         [ready_fut], _ = ray.wait(futures, num_returns=1)
         return self.jobs_running[ready_fut].trial
-    
+
     def get_next_failed_trial(self) -> Optional[Trial]:
         if ray.worker._mode() == ray.worker.LOCAL_MODE:
             return None
@@ -743,7 +742,7 @@ class FluidExecutor(TrialExecutor):
             memory=int(memory),
             object_store_memory=int(object_store_memory),
             custom_resources=custom_resources)
-        
+
         assert self.idle_resources.is_nonnegative(), "Cluster removed resources from running trials!"
 
         self._avail_resources = avail_resources
@@ -789,7 +788,7 @@ class FluidExecutor(TrialExecutor):
 
         assert self._committed_resources.is_nonnegative(), (
             "Resource invalid: {}".format(resources))
-    
+
     def on_no_available_trials(self, trial_runner):
         """This is called when we get all trial from a batch from the search algo"""
         logger.debug('on_no_available_trials')

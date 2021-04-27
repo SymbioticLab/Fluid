@@ -14,13 +14,13 @@ from workloads.common import cifar as workload
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, 'tune_')
 
-import os 
+import os
 def sched_algo():
     return int(os.environ.get("NUM_WORKER", 4))
 
 def setup_tune_scheduler(num_worker):
     search_space = workload.create_search_space()
-    # experiment_metrics = workload.exp_metric() 
+    # experiment_metrics = workload.exp_metric()
     asha_parallel = AsyncHyperBandSchedulerWithParalelism(
         # set a large max_t such that ASHA will always promot to next rung,
         # until something reaches target accuracy
@@ -31,7 +31,7 @@ def setup_tune_scheduler(num_worker):
 
     return dict(
         scheduler=asha_parallel,
-        search_alg=VariantGenerator(max_concurrent = sched_algo() ), 
+        search_alg=VariantGenerator(max_concurrent = sched_algo() ),
         config=search_space,
         resources_per_trial=com.detect_baseline_resource(),
     )

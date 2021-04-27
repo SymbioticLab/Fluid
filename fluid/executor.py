@@ -3,11 +3,12 @@ from ray.tune.error import TuneError
 from ray.tune.ray_trial_executor import RayTrialExecutor
 from ray.tune.trial import Trial
 
+
 class MyRayTrialExecutor(RayTrialExecutor):
 
     def __init__(self):
         super(MyRayTrialExecutor, self).__init__()
-    
+
     def on_no_available_trials(self, trial_runner):
         if self._queue_trials:
             return

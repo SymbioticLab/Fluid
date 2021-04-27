@@ -5,21 +5,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import time
+import os
 
 import math
 from collections import OrderedDict
 
-import numpy as np 
-from ray import tune 
+import numpy as np
+from ray import tune
 from torchvision import datasets, transforms
 
-import workloads.common as com 
+import workloads.common as com
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 
 
 class VGG(nn.Module):
     # You will implement a simple version of vgg11 (https://arxiv.org/pdf/1409.1556.pdf)
-    # Since the shape of image in CIFAR10 is 32x32x3, much smaller than 224x224x3, 
+    # Since the shape of image in CIFAR10 is 32x32x3, much smaller than 224x224x3,
     # the number of channels and hidden units are decreased compared to the architecture in paper
     def __init__(self):
         super(VGG, self).__init__()
@@ -33,29 +34,28 @@ class VGG(nn.Module):
             # TODO: convolutional layer, input channels 8, output channels 16, filter size 3
             torch.nn.Conv2d(8,16,3,padding=1),
             # TODO: max-pooling layer, size 2
-            torch.nn.MaxPool2d(2),                     
+            torch.nn.MaxPool2d(2),
             # Stage 3
             # TODO: convolutional layer, input channels 16, output channels 32, filter size 3
             torch.nn.Conv2d(16,32,3,padding=1),
             # TODO: convolutional layer, input channels 32, output channels 32, filter size 3
             torch.nn.Conv2d(32,32,3,padding=1),
             # TODO: max-pooling layer, size 2
-            torch.nn.MaxPool2d(2),                    
+            torch.nn.MaxPool2d(2),
             # Stage 4
             # TODO: convolutional layer, input channels 32, output channels 64, filter size 3
             torch.nn.Conv2d(32,64,3,padding=1),
             # TODO: convolutional layer, input channels 64, output channels 64, filter size 3
             torch.nn.Conv2d(64,64,3,padding=1),
             # TODO: max-pooling layer, size 2
-            torch.nn.MaxPool2d(2),                     
+            torch.nn.MaxPool2d(2),
             # Stage 5
             # TODO: convolutional layer, input channels 64, output channels 64, filter size 3
             torch.nn.Conv2d(64,64,3,padding=1),
             # TODO: convolutional layer, input channels 64, output channels 64, filter size 3
             torch.nn.Conv2d(64,64,3,padding=1),
             # TODO: max-pooling layer, size 2
-            torch.nn.MaxPool2d(2)                        
-
+            torch.nn.MaxPool2d(2)
         )
         self.fc = nn.Sequential(
             # TODO: fully-connected layer (64->64)
@@ -82,7 +82,7 @@ def exp_metric():
 def create_stopper():
     return com.MetricStopper(0.92, **exp_metric())
 
-def data_creator(config): 
+def data_creator(config):
     print('==> Preparing data..')
     traindir = os.path.join(DATA_PATH, 'train')
     valdir = os.path.join(DATA_PATH, 'val')
@@ -101,7 +101,7 @@ def data_creator(config):
     train_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+        train_dataset, batch_size=config.batch_size, shuffle=(train_sampler is None),
          pin_memory=True, sampler=train_sampler)
 
     val_loader = torch.utils.data.DataLoader(
@@ -111,7 +111,7 @@ def data_creator(config):
             transforms.ToTensor(),
             normalize,
         ])),
-        batch_size=args.batch_size, shuffle=False, pin_memory=True)
+        batch_size=config.batch_size, shuffle=False, pin_memory=True)
 
 
 
@@ -135,22 +135,22 @@ def train(trainloader, net, criterion, optimizer, device):
         for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
             labels = labels.to(device)
-            
+
             # TODO: zero the parameter gradients
             optimizer.zero_grad()
             # TODO: forward pass
-            
+
             outputs = net(images)
-            
+
             loss = criterion(outputs, labels)
-            
+
             # TODO: backward pass
             loss.backward()
             # TODO: optimize the network
             optimizer.step()
             # print statistics
             running_loss += loss.item()
-            
+
             if i % 100 == 99:    # print every 2000 mini-batches
                 end = time.time()
                 print('[epoch %d, iter %5d] loss: %.3f eplased time %.3f' %
@@ -192,16 +192,16 @@ def main():
                                        download=True, transform=transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=100,
                                          shuffle=False)
-    
+
     net = VGG().to(device)
-    
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(net.parameters(), lr=0.005,eps=1e-08, betas=(0.9, 0.999))
-    
+
     train(trainloader, net, criterion, optimizer, device)
-    
+
     test(testloader, net, device)
-    
+
 
 if __name__== "__main__":
     main()

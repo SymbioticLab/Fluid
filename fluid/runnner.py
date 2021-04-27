@@ -11,7 +11,7 @@ from ray.tune.trial_runner import TrialRunner
 from ray.tune.web_server import TuneServer
 
 class MyTrialRunner(TrialRunner) :
-    
+
     def __init__(self,
                  search_alg=None,
                  scheduler=None,
@@ -27,7 +27,7 @@ class MyTrialRunner(TrialRunner) :
                  checkpoint_period=10,
                  trial_executor=None):
         super(MyTrialRunner, self).__init__()
-        
+
     def _execute_action(self, trial, decision):
         """Executes action based on decision.
 

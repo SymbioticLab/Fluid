@@ -109,7 +109,7 @@ class MetricStopper(Stopper):
         }[mode]
         self.metric = metric
         self.target = target
-        
+
 
         self.current_best = None
 
@@ -117,7 +117,7 @@ class MetricStopper(Stopper):
         if self.current_best is None:
             logger.info("Stopper: current best: None -> %f", result[self.metric])
             self.current_best = result[self.metric]
-        
+
         if self.current_best is not None:
             old = self.current_best
             self.current_best = self.op(self.current_best, result[self.metric])

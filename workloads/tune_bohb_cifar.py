@@ -12,7 +12,7 @@ from ray.tune.suggest.bohb import TuneBOHB
 from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.util.sgd.utils import BATCH_SIZE
 from ray import tune
- 
+
 from fluid.trainer import TorchTrainer
 
 import workloads.common as com
@@ -47,7 +47,7 @@ def setup_tune_scheduler():
 def main():
 
     eta, sd = com.init_ray()
-    
+
     MyTrainable_AsyncBOHB = TorchTrainer.as_trainable(
         data_creator=workload.data_creator,
         model_creator=workload.model_creator,
