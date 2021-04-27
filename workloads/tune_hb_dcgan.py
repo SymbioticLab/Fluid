@@ -1,17 +1,16 @@
 from pathlib import Path
 
-from ray.tune.schedulers.hyperband import HyperBandScheduler
 from ray import tune
+from ray.tune.schedulers.hyperband import HyperBandScheduler
 from ray.util.sgd.utils import BATCH_SIZE
 
+import workloads.common as com
 from fluid.algo_random import VariantGenerator
 from fluid.trainer import TorchTrainer
 from workloads.common import dcgan as workload
-import workloads.common as com
-
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()
-EXP_NAME = com.remove_prefix(Path(__file__).stem, 'tune_')
+EXP_NAME = com.remove_prefix(Path(__file__).stem, "tune_")
 
 
 def setup_tune_scheduler(eta):
@@ -22,7 +21,8 @@ def setup_tune_scheduler(eta):
         time_attr="training_iteration",
         max_t=81,
         reduction_factor=eta,
-        **experiment_metrics)
+        **experiment_metrics
+    )
 
     return dict(
         search_alg=VariantGenerator(),
@@ -44,29 +44,26 @@ def main():
         optimizer_creator=workload.optimizer_creator,
         training_operator_cls=workload.GANOperator,
         config={
-            'seed': sd,
-            'extra_fluid_trial_resources': {},
+            "seed": sd,
+            "extra_fluid_trial_resources": {},
             **workload.static_config(),
         },
-        use_tqdm=True
+        use_tqdm=True,
     )
 
     params = {
         **com.run_options(__file__),
-        'stop': workload.create_stopper(),
+        "stop": workload.create_stopper(),
         **setup_tune_scheduler(eta),
     }
 
-    analysis = tune.run(
-        MyTrainable,
-        **params
-    )
+    analysis = tune.run(MyTrainable, **params)
 
     dfs = analysis.trial_dataframes
     for logdir, df in dfs.items():
         ld = Path(logdir)
-        df.to_csv(ld / 'trail_dataframe.csv')
+        df.to_csv(ld / "trail_dataframe.csv")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

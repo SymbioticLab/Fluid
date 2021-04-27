@@ -7,17 +7,18 @@ Created on Wed Jun 10 15:02:14 2020
 """
 from __future__ import annotations
 
-import os
 import logging
+import os
+from typing import TYPE_CHECKING
+
 import numpy as np
-from ray.tune.trial import Trial
 from ray.tune.error import TuneError
 from ray.tune.result import TIME_THIS_ITER_S, TRAINING_ITERATION
 from ray.tune.schedulers import HyperBandForBOHB
+from ray.tune.trial import Trial
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List, Optional, TypedDict, Tuple, Union, Dict, Set, NamedTuple
+    from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ def sched_algo():
 
 # Implementation notes:
 #    Synchronous BOHB
+
 
 class SyncBOHB(HyperBandForBOHB):
     def choose_trial_to_run(self, trial_runner):
@@ -44,12 +46,27 @@ class SyncBOHB(HyperBandForBOHB):
             # are to be allocated to that bracket.
             scrubbed = [b for b in hyperband if b is not None]
             for bracket in scrubbed:
-                if any(t.status == Trial.PENDING or t.status == Trial.RUNNING for t in bracket.current_trials()) :
+                if any(
+                    t.status == Trial.PENDING or t.status == Trial.RUNNING
+                    for t in bracket.current_trials()
+                ):
                     stop_find = True
-                    if np.sum(list(map(lambda x: x.status == Trial.RUNNING, bracket.current_trials()))) < sched_algo() :
+                    if (
+                        np.sum(
+                            list(
+                                map(
+                                    lambda x: x.status == Trial.RUNNING,
+                                    bracket.current_trials(),
+                                )
+                            )
+                        )
+                        < sched_algo()
+                    ):
                         for trial in bracket.current_trials():
-                            if (trial.status == Trial.PENDING
-                                    and trial_runner.has_resources(trial.resources)):
+                            if (
+                                trial.status == Trial.PENDING
+                                and trial_runner.has_resources(trial.resources)
+                            ):
                                 return trial
                     break
             if stop_find:
@@ -57,12 +74,13 @@ class SyncBOHB(HyperBandForBOHB):
 
         # MAIN CHANGE HERE!
         # not a trial is running?
-        if not any(t.status == Trial.RUNNING
-                   for t in trial_runner.get_trials()):
+        if not any(t.status == Trial.RUNNING for t in trial_runner.get_trials()):
             for hyperband in self._hyperbands:
                 for bracket in hyperband:
-                    if bracket and any(trial.status == Trial.PAUSED
-                                       for trial in bracket.current_trials()):
+                    if bracket and any(
+                        trial.status == Trial.PAUSED
+                        for trial in bracket.current_trials()
+                    ):
                         # This will change the trial state and let the
                         # trial runner retry.
                         self._process_bracket(trial_runner, bracket)

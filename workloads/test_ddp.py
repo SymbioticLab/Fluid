@@ -7,30 +7,29 @@ Created on Sat Jun 20 22:49:12 2020
 """
 
 import tensorflow as tf
+
 try:
-    tf.get_logger().setLevel('INFO')
+    tf.get_logger().setLevel("INFO")
 except Exception as exc:
     print(exc)
 import warnings
+
 warnings.simplefilter("ignore")
-
-import numpy as np
-import torch
-import torch.optim as optim
-from torchvision import datasets
-from ray.tune.examples.mnist_pytorch import train, test, ConvNet, get_data_loaders
-
-import ray
-from ray import tune
-from ray.tune import track
-from ray.tune.schedulers import AsyncHyperBandScheduler
-
-from hyperopt import hp
-from ray.tune.suggest.hyperopt import HyperOptSearch
-from ray.tune.schedulers import ASHAScheduler
 
 import matplotlib.pyplot as plt
 import matplotlib.style as style
+import numpy as np
+import ray
+import torch
+import torch.optim as optim
+from hyperopt import hp
+from ray import tune
+from ray.tune import track
+from ray.tune.examples.mnist_pytorch import ConvNet, get_data_loaders, test, train
+from ray.tune.schedulers import ASHAScheduler, AsyncHyperBandScheduler
+from ray.tune.suggest.hyperopt import HyperOptSearch
+from torchvision import datasets
+
 style.use("ggplot")
 
 datasets.MNIST("~/data", train=True, download=True)
@@ -42,15 +41,17 @@ def train_mnist(config):
     train_loader, test_loader = get_data_loaders()
 
     optimizer = optim.SGD(
-        model.parameters(), lr=config["lr"], momentum=config["momentum"])
+        model.parameters(), lr=config["lr"], momentum=config["momentum"]
+    )
 
     for i in range(20):
         train(model, optimizer, train_loader)  # Train for 1 epoch
         acc = test(model, test_loader)  # Obtain validation accuracy.
-        tune.track.log(mean_accuracy=acc) #here
+        tune.track.log(mean_accuracy=acc)  # here
         if i % 5 == 0:
-            torch.save(model, "./model.pth") # This saves the model to the trial directory
-
+            torch.save(
+                model, "./model.pth"
+            )  # This saves the model to the trial directory
 
 
 # This is a HyperOpt specific hyperparameter space configuration.
@@ -61,7 +62,9 @@ space = {
 
 # TODO: Create a HyperOptSearch object by passing in a HyperOpt specific search space.
 # Also enforce that only 1 trials can run concurrently.
-hyperopt_search = HyperOptSearch(space, max_concurrent=1, metric="mean_accuracy", mode="max")
+hyperopt_search = HyperOptSearch(
+    space, max_concurrent=1, metric="mean_accuracy", mode="max"
+)
 
 # We Remove the dir so that we can visualize tensorboard correctly
 # ! rm -rf ~/ray_results/search_algorithm
@@ -69,10 +72,10 @@ hyperopt_search = HyperOptSearch(space, max_concurrent=1, metric="mean_accuracy"
 
 # ray.shutdown()  # Restart Ray defensively in case the ray connection is lost.
 
-ray.init(address='auto')
+ray.init(address="auto")
 # ray.init(num_gpus=6)
-custom_scheduler =ASHAScheduler(
-    metric='mean_accuracy',
+custom_scheduler = ASHAScheduler(
+    metric="mean_accuracy",
     mode="max",
     grace_period=1,
 )
@@ -81,7 +84,7 @@ analysis = tune.run(
     search_alg=hyperopt_search,
     scheduler=custom_scheduler,
     num_samples=10,
-    resources_per_trial={"gpu":1},
+    resources_per_trial={"gpu": 1},
     verbose=1,
-    name="use_gpu"  # This is used to specify the logging directory.
+    name="use_gpu",  # This is used to specify the logging directory.
 )

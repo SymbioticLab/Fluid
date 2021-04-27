@@ -7,17 +7,17 @@ Created on Sat May  9 21:10:13 2020
 """
 from __future__ import annotations
 
-import logging
 import collections
+import logging
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 import ray
-from ray.tune.trial import Trial
 from ray.tune.result import TIME_THIS_ITER_S
+from ray.tune.trial import Trial
 
-from typing import NamedTuple, TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List, Optional, TypedDict, Dict
+    from typing import Dict, List, Optional, TypedDict
 
     class SchedState(TypedDict):
         bracket: Optional[Bracket]
@@ -33,6 +33,7 @@ class Bracket:
 
     Also keeps track of progress to ensure good scheduling.
     """
+
     class RungParam(NamedTuple):
         idx: int
         # max number of trials
@@ -50,7 +51,9 @@ class Bracket:
 
     def __init__(self, res_name, max_trials, init_res, max_res, eta, s):
         # print("<<<< Init Bracket :",res_name, max_trials, init_res, max_res, eta, s )
-        self._live_trials: Dict[Trial, Bracket.TrialInfo] = {}  # maps trial -> current result
+        self._live_trials: Dict[
+            Trial, Bracket.TrialInfo
+        ] = {}  # maps trial -> current result
         self._all_trials = []
         self._res_name = res_name  # attribute to
 
@@ -72,17 +75,17 @@ class Bracket:
             rung = Bracket.RungParam(idx, n, r)
             self._rungs.append(rung)
             n = int(np.ceil(n / eta))
-            r = int(min(r * eta, max_res ))
+            r = int(min(r * eta, max_res))
 
         self._halves = s
 
-    '''
+    """
     def init_rung(max_trial, max_res):
         init_res = int(max_res / max_trial)
         num_iter = min(int(np.log(max_trial)/ np.log(self._eta) ),
                      int(np.log(max_res)/ np.log(self._eta) ) )
         for idx in range(num_iter):
-    '''
+    """
 
     def add_trial(self, trial):
         """Add trial to bracket assuming bracket is not filled.
@@ -96,8 +99,8 @@ class Bracket:
     def _add_trial_to_rung(self, trial: Trial, rung: RungParam):
         assert not self.filled(rung.idx), "Cannot add trial to filled bracket!"
 
-        self._rungs[rung.idx] = self._rungs[rung.idx] ._replace(added = rung.added+1)
-        self._live_trials[trial]= self._live_trials[trial]._replace(rung = rung.idx)
+        self._rungs[rung.idx] = self._rungs[rung.idx]._replace(added=rung.added + 1)
+        self._live_trials[trial] = self._live_trials[trial]._replace(rung=rung.idx)
 
     def filled(self, rung_idx: int = 0):
         """Checks if bracket is filled.
@@ -115,14 +118,16 @@ class Bracket:
 
     def rung_is_done(self, rung_idx):
         """Rung is done if
-            - this rung is full and all done
-            - next rung is full
-            - next rung is done
+        - this rung is full and all done
+        - next rung is full
+        - next rung is done
         """
         if self.filled(rung_idx):
             # trials in rung may be fewer than rung.added, but it's fine.
             # the missing trials are promoted and can be considered terminated for this rung
-            return all(not self.continue_trial(t) for t in self.trials_in_rung(rung_idx))
+            return all(
+                not self.continue_trial(t) for t in self.trials_in_rung(rung_idx)
+            )
         return False
 
     def trials_in_rung(self, rung_idx: int) -> List[Trial]:
@@ -131,10 +136,8 @@ class Bracket:
     def current_trials(self):
         return list(self._live_trials)
 
-
     def cleanup_rungs(self) -> List[Trial]:
-        """Return any trial that need to be terminated
-        """
+        """Return any trial that need to be terminated"""
         clean_trials = [
             t
             for t, info in self._live_trials.items()
@@ -160,37 +163,34 @@ class Bracket:
         # going from last rung to rung 0
         for rung in self._rungs:
             trials_done = [
-                t
-                for t in self.trials_in_rung(rung.idx)
-                if not self.continue_trial(t)
+                t for t in self.trials_in_rung(rung.idx) if not self.continue_trial(t)
             ]
 
             # print("<<trial done: ", trials_done," / ", rung.n )
-            if self.filled(rung.idx + 1) or len(trials_done) == 0 :
+            if self.filled(rung.idx + 1) or len(trials_done) == 0:
                 continue
 
-            nxt_trials_launch = [
-                t
-                for t in self.trials_in_rung(rung.idx + 1)
-            ]
+            nxt_trials_launch = [t for t in self.trials_in_rung(rung.idx + 1)]
 
-            if len(nxt_trials_launch) >= self._rungs[ rung.idx + 1 ].n:
+            if len(nxt_trials_launch) >= self._rungs[rung.idx + 1].n:
                 continue
 
-            next_n = min( self._rungs[rung.idx + 1].n, self._n / (self._eta ** (rung.idx+1) ))
-            cur_n =  min(rung.n  , self._n / (self._eta ** rung.idx))
-            num_promotable = int( len(trials_done) - round(cur_n - next_n))
+            next_n = min(
+                self._rungs[rung.idx + 1].n, self._n / (self._eta ** (rung.idx + 1))
+            )
+            cur_n = min(rung.n, self._n / (self._eta ** rung.idx))
+            num_promotable = int(len(trials_done) - round(cur_n - next_n))
 
             if num_promotable <= 0:
                 continue
             # sort in asc order, good ones are the last num_promotable trials
             sorted_trials = sorted(
                 trials_done,
-                key=lambda t: metric_op * self._live_trials[t].result[metric])
+                key=lambda t: metric_op * self._live_trials[t].result[metric],
+            )
             promotables += sorted_trials[-num_promotable:]
             bad += sorted_trials[:-num_promotable]
         return promotables, bad
-
 
     def promote(self, trial: Trial):
         next_idx = self._live_trials[trial].rung + 1
@@ -207,12 +207,13 @@ class Bracket:
         assert trial in self._live_trials
         assert self._get_result_time(result) >= 0
 
-        delta = self._get_result_time(result) - \
-            self._get_result_time(self._live_trials[trial].result)
+        delta = self._get_result_time(result) - self._get_result_time(
+            self._live_trials[trial].result
+        )
         assert delta >= 0, (result, self._live_trials[trial])
         self._completed_progress += delta
 
-        self._live_trials[trial]= self._live_trials[trial]._replace(result=result)
+        self._live_trials[trial] = self._live_trials[trial]._replace(result=result)
 
     def cleanup_trial(self, trial):
         """Clean up statistics tracking for terminated trials (either by force
@@ -230,7 +231,7 @@ class Bracket:
         Lets the last trial continue to run until termination condition
         kicks in."""
         for trial in self.current_trials():
-            if (trial.status == Trial.PAUSED):
+            if trial.status == Trial.PAUSED:
                 trial_runner.stop_trial(trial)
 
     def completion_percentage(self):
@@ -248,16 +249,24 @@ class Bracket:
         return result[self._res_name]
 
     def __repr__(self):
-        status = ", ".join([
-            "Max Sizes (n)={}".format([rung.n for rung in self._rungs]),
-            "Milestones (r)={}".format([rung.r for rung in self._rungs]),
-            "completed={:.1%}".format(self.completion_percentage())
-        ])
+        status = ", ".join(
+            [
+                "Max Sizes (n)={}".format([rung.n for rung in self._rungs]),
+                "Milestones (r)={}".format([rung.r for rung in self._rungs]),
+                "completed={:.1%}".format(self.completion_percentage()),
+            ]
+        )
         counts = collections.Counter([t.status for t in self._all_trials])
         trial_statuses = ", ".join(
-            sorted("{}: {}".format(k, v) for k, v in counts.items()))
+            sorted("{}: {}".format(k, v) for k, v in counts.items())
+        )
         return "Bracket({}): {{{}}} ".format(status, trial_statuses)
 
     def sort_by_runtime(self):
-        self._live_trials = dict(sorted(self._live_trials.items(), key=lambda x:x[1].result[TIME_THIS_ITER_S], reverse=True))
-
+        self._live_trials = dict(
+            sorted(
+                self._live_trials.items(),
+                key=lambda x: x[1].result[TIME_THIS_ITER_S],
+                reverse=True,
+            )
+        )

@@ -1,12 +1,15 @@
 import itertools
 
+from ray.tune.config_parser import create_trial_from_spec, make_parser
 from ray.tune.error import TuneError
 from ray.tune.experiment import convert_to_experiment_list
-from ray.tune.config_parser import make_parser, create_trial_from_spec
-from ray.tune.suggest.variant_generator import (generate_variants, format_vars,
-                                                flatten_resolved_vars)
-from ray.tune.suggest.search import SearchAlgorithm
 from ray.tune.suggest.bohb import TuneBOHB as OrigTuneBOHB
+from ray.tune.suggest.search import SearchAlgorithm
+from ray.tune.suggest.variant_generator import (
+    flatten_resolved_vars,
+    format_vars,
+    generate_variants,
+)
 
 
 class VariantGenerator(SearchAlgorithm):
@@ -42,9 +45,7 @@ class VariantGenerator(SearchAlgorithm):
     """
 
     def __init__(self, max_concurrent=10, shuffle=False):
-        """Initializes the Variant Generator.
-
-        """
+        """Initializes the Variant Generator."""
         self._parser = make_parser()
         self._trial_generator = []
         self._counter = 0
@@ -68,8 +69,11 @@ class VariantGenerator(SearchAlgorithm):
             self._trial_generator = itertools.chain(
                 self._trial_generator,
                 self._generate_trials(
-                    experiment.spec.get("num_samples", 1), experiment.spec,
-                    experiment.name))
+                    experiment.spec.get("num_samples", 1),
+                    experiment.spec,
+                    experiment.name,
+                ),
+            )
 
     def next_trials(self):
         """Provides a batch of Trial objects to be queued into the TrialRunner.
@@ -126,13 +130,12 @@ class VariantGenerator(SearchAlgorithm):
                     self._parser,
                     evaluated_params=flatten_resolved_vars(resolved_vars),
                     trial_id=trial_id,
-                    experiment_tag=experiment_tag)
+                    experiment_tag=experiment_tag,
+                )
 
-    def on_trial_complete(self,
-                          trial_id,
-                          result=None,
-                          error=False,
-                          early_terminated=False):
+    def on_trial_complete(
+        self, trial_id, result=None, error=False, early_terminated=False
+    ):
         """Notification for the completion of trial.
 
         The result is internally negated when interacting with Nevergrad

@@ -3,21 +3,21 @@ import json
 import unittest
 
 import ray
-#from ray.rllib import _register_all
-from ray.tune import Trainable
-from ray.tune.registry import _global_registry, TRAINABLE_CLASS, register_trainable
-from ray.tune.result import TRAINING_ITERATION
-from ray.tune.suggest import BasicVariantGenerator
-from ray.tune.trial import Trial, Checkpoint
-from ray.tune.resources import Resources
 from ray.cluster_utils import Cluster
 from ray.rllib import _register_all
+
+# from ray.rllib import _register_all
+from ray.tune import Trainable
+from ray.tune.registry import TRAINABLE_CLASS, _global_registry, register_trainable
+from ray.tune.resources import Resources
+from ray.tune.result import TRAINING_ITERATION
+from ray.tune.suggest import BasicVariantGenerator
+from ray.tune.trial import Checkpoint, Trial
 
 from fluid.fluid_executor import FluidExecutor
 
 
 class FluidExecutorTest(unittest.TestCase):
-
     def setUp(self):
         # register the __fake trainable
         _register_all()
@@ -175,17 +175,17 @@ class FluidExecutorTest(unittest.TestCase):
                 self.config = config
                 return True
 
-        trials = self.generate_trials({
-            "run": B,
-            "config": {
-                "foo": 0
+        trials = self.generate_trials(
+            {
+                "run": B,
+                "config": {"foo": 0},
             },
-        }, "grid_search")
+            "grid_search",
+        )
         trial = trials[0]
         self.trial_executor.start_trial(trial)
         self.trial_executor.on_no_available_trials(None)
-        exists = self.trial_executor.reset_trial(trial, {"hi": 1},
-                                                 "modified_mock")
+        exists = self.trial_executor.reset_trial(trial, {"hi": 1}, "modified_mock")
         self.assertEqual(exists, True)
         self.assertEqual(trial.config.get("hi"), 1)
         self.assertEqual(trial.experiment_tag, "modified_mock")
@@ -212,10 +212,9 @@ class FluidExecutorQueueTest(unittest.TestCase):
             connect=True,
             head_node_args={
                 "num_cpus": 1,
-                "_internal_config": json.dumps({
-                    "num_heartbeats_timeout": 10
-                })
-            })
+                "_internal_config": json.dumps({"num_heartbeats_timeout": 10}),
+            },
+        )
         self.trial_executor = FluidExecutor()
         # Pytest doesn't play nicely with imports
         _register_all()
@@ -252,14 +251,16 @@ class LocalModeExecutorTest(FluidExecutorTest):
 
 
 if __name__ == "__main__":
-    import pytest
-    import sys
     import logging
+    import sys
+
+    import pytest
+
     root = logging.getLogger()
     root.setLevel(logging.INFO)
-    logger = logging.getLogger('fluid.fluid_executor')
+    logger = logging.getLogger("fluid.fluid_executor")
     logger.setLevel(logging.DEBUG)
-    logger = logging.getLogger('ray.tune.registry')
+    logger = logging.getLogger("ray.tune.registry")
     logger.setLevel(logging.INFO)
     sys.exit(pytest.main(["-x", "-v", "--ff", __file__]))
-    #sys.exit(pytest.main())
+    # sys.exit(pytest.main())

@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import defaultdict
+from typing import TYPE_CHECKING
+
 import numpy as np
 import ray
-from ray.tune.schedulers.trial_scheduler import FIFOScheduler, TrialScheduler
-from ray.tune.trial import Trial
 from ray.tune.error import TuneError
 from ray.tune.result import TIME_THIS_ITER_S, TRAINING_ITERATION
+from ray.tune.schedulers.trial_scheduler import FIFOScheduler, TrialScheduler
+from ray.tune.trial import Trial
+
 from .my_bracket import Bracket
 from .ray_custom_gpu_res import create_custom_gpu_res
-from collections import defaultdict
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import List, Optional, TypedDict, Tuple, Union, Dict
+    from typing import Dict, List, Optional, Tuple, TypedDict, Union
 
     class SchedState(TypedDict):
         bracket: Optional[Bracket]
@@ -87,12 +89,15 @@ class FluidBandScheduler(FIFOScheduler):
         reduction_factor (float): Same as `eta`. Determines how sharp
             the difference is between bracket space-time allocation ratios.
     """
-    def __init__(self,
-                 res_name="training_iteration",
-                 max_res=9,
-                 metric="mean_accuracy",
-                 mode="max",
-                 reduction_factor=3):
+
+    def __init__(
+        self,
+        res_name="training_iteration",
+        max_res=9,
+        metric="mean_accuracy",
+        mode="max",
+        reduction_factor=3,
+    ):
         assert max_res > 0, "Max (time_attr) not valid!"
         assert mode in ["min", "max"], "`mode` must be 'min' or 'max'!"
 
@@ -100,14 +105,12 @@ class FluidBandScheduler(FIFOScheduler):
         FIFOScheduler.__init__(self)
         self._eta = reduction_factor
         # number of interations
-        self._s_max_1 = int(
-            np.round(np.log(max_res) / np.log(reduction_factor))) + 1
+        self._s_max_1 = int(np.round(np.log(max_res) / np.log(reduction_factor))) + 1
         self._max_res = max_res
         # bracket max trials
-        self._get_n0 = lambda s: int(
-            np.ceil(self._s_max_1 / (s + 1) * self._eta**s))
+        self._get_n0 = lambda s: int(np.ceil(self._s_max_1 / (s + 1) * self._eta ** s))
         # bracket initial iterations
-        self._get_r0 = lambda s: int((max_res * self._eta**(-s)))
+        self._get_r0 = lambda s: int((max_res * self._eta ** (-s)))
         # list of hyperband iterations
         self._iterations: List[List[Optional[Bracket]]] = [[]]
         # Stores Trial -> Bracket, Band Iteration
@@ -116,15 +119,13 @@ class FluidBandScheduler(FIFOScheduler):
         self._num_stopped = 0
         self._metric = metric
         if mode == "max":
-            self._metric_op = 1.
+            self._metric_op = 1.0
         elif mode == "min":
-            self._metric_op = -1.
+            self._metric_op = -1.0
         self._res_name = res_name
 
         # scheduler estimator
-        self.base_rung_runtime_sum = [
-            [0 for x in range(self._s_max_1)]
-        ]
+        self.base_rung_runtime_sum = [[0 for x in range(self._s_max_1)]]
         # map trial to init res
         self._res_estimator = {}
         self.trial_runtime = [[]]
@@ -136,7 +137,7 @@ class FluidBandScheduler(FIFOScheduler):
         self._gpu_resources: Dict[str, float] = {
             k: v
             for k, v in ray.cluster_resources().items()
-            if k.startswith('fluid_GPU')
+            if k.startswith("fluid_GPU")
         }
         self.num_gpu_resources = len(self._gpu_resources)
         self.gpu_overhead = [0 for x in range(self.num_gpu_resources)]
@@ -148,8 +149,11 @@ class FluidBandScheduler(FIFOScheduler):
         self.cur_iter_idx = 0
         self.cur_braket_idx = 0
         self.start_iter = [[]]
-        print("[Grab {num} resources]:{gpu} ".format(
-            num=self.num_gpu_resources, gpu=self._gpu_resources))
+        print(
+            "[Grab {num} resources]:{gpu} ".format(
+                num=self.num_gpu_resources, gpu=self._gpu_resources
+            )
+        )
 
         self._sm: Union[None, Stage0, Stage1, Stage2] = None  # Stage0(self)
         logger.info("[Grab resources] {res}".format(res=self._gpu_resources))
@@ -187,8 +191,14 @@ class FluidBandScheduler(FIFOScheduler):
             s = self._s_max_1 - 1
             if self._get_r0(s) == 0:
                 return None
-            b = Bracket(self._res_name, self._get_n0(s), self._get_r0(s),
-                        self._max_res, self._eta, s)
+            b = Bracket(
+                self._res_name,
+                self._get_n0(s),
+                self._get_r0(s),
+                self._max_res,
+                self._eta,
+                s,
+            )
 
             iteration.append(b)
             self.start_iter[iter_idx].append(0)
@@ -251,22 +261,26 @@ class FluidBandScheduler(FIFOScheduler):
             # are to be allocated to that bracket.
             scrubbed = [b for b in iteration if b is not None]
             for indx_b, bracket in enumerate(scrubbed):
-                if any(t.status == Trial.PENDING or t.status == Trial.RUNNING
-                       for t in bracket.current_trials()):
+                if any(
+                    t.status == Trial.PENDING or t.status == Trial.RUNNING
+                    for t in bracket.current_trials()
+                ):
                     stop_find = True
                     for trial in bracket.current_trials():
-                        if (trial.status == Trial.PENDING and
-                                trial_runner.has_resources(trial.resources)):
+                        if (
+                            trial.status == Trial.PENDING
+                            and trial_runner.has_resources(trial.resources)
+                        ):
                             if trial in self.update_res:
-                                self.update_resource(self.update_res[trial],
-                                                     trial)
+                                self.update_resource(self.update_res[trial], trial)
                                 del self.update_res[trial]
                             if self.start_iter[idx][indx_b] == 0:
                                 self.start_iter[idx][indx_b] = 1
                                 self.stage = 0
                                 self._sm = Stage0(self)
-                            print("choose_trial_to_run: ", trial, " on ",
-                                  trial.resources)
+                            print(
+                                "choose_trial_to_run: ", trial, " on ", trial.resources
+                            )
                             return trial
                     break
             if stop_find:
@@ -274,8 +288,9 @@ class FluidBandScheduler(FIFOScheduler):
 
         _, _, cur_bracket = self.find_cur_braket()
 
-        if self.stage == 0 and \
-                all([t.status == Trial.PAUSED for t in cur_bracket.current_trials()]):
+        if self.stage == 0 and all(
+            [t.status == Trial.PAUSED for t in cur_bracket.current_trials()]
+        ):
             self.stage += 1
             self._sm = Stage1(self, trial_runner)
 
@@ -341,7 +356,8 @@ class FluidBandScheduler(FIFOScheduler):
         """
         out = "Using FluidBand: "
         out += "num_stopped={} total_brackets={}".format(
-            self._num_stopped, sum(len(band) for band in self._iterations))
+            self._num_stopped, sum(len(band) for band in self._iterations)
+        )
         for i, band in enumerate(self._iterations):
             out += "\nRound #{}:".format(i)
             for bracket in band:
@@ -352,7 +368,7 @@ class FluidBandScheduler(FIFOScheduler):
     def state(self):
         return {
             "num_brackets": sum(len(band) for band in self._iterations),
-            "num_stopped": self._num_stopped
+            "num_stopped": self._num_stopped,
         }
 
     def find_cur_braket(self):
@@ -377,7 +393,7 @@ class FluidBandScheduler(FIFOScheduler):
         # scheduling, but are not allocated on the trail's ray actor.
         # In the trail's ray actor (see trainer.py _start_workers), more ray actors
         # are started, which will use the extra resources.
-        if ray.cluster_resources().get('GPU', 0) > 0:
+        if ray.cluster_resources().get("GPU", 0) > 0:
             trial.update_resources(
                 cpu=1,
                 gpu=sum(first.values()),
@@ -396,14 +412,14 @@ class FluidBandScheduler(FIFOScheduler):
         # this config key is must have for TorchTrainer to work correctly
         # this is used to pass the extr resource dict to the trainer.
         # there is no other way to do this at the moment.
-        trial.config['extra_fluid_trial_resources'] = others
+        trial.config["extra_fluid_trial_resources"] = others
         # this is for logging purposes.
-        trial.config['all_fluid_trial_resources'] = gpu_dict
+        trial.config["all_fluid_trial_resources"] = gpu_dict
 
 
 class Stage0:
-    '''First run every trial for one step to get performance data
-    '''
+    """First run every trial for one step to get performance data"""
+
     def __init__(self, sched: FluidBandScheduler):
         self.p = sched
         print("[Stage0 init: Profiling jobs]")
@@ -418,10 +434,10 @@ class Stage0:
     def on_trial_result(self, trial_runner, trial, result) -> str:
         self.p._res_estimator[trial] = result
         assert result.get(TIME_THIS_ITER_S) is not None
-        self.p.trial_runtime[self.cur_iter][self.cur_b].append(
-            result[TIME_THIS_ITER_S])
-        self.p.base_rung_runtime_sum[self.cur_iter][
-            self.cur_b] += result[TIME_THIS_ITER_S]
+        self.p.trial_runtime[self.cur_iter][self.cur_b].append(result[TIME_THIS_ITER_S])
+        self.p.base_rung_runtime_sum[self.cur_iter][self.cur_b] += result[
+            TIME_THIS_ITER_S
+        ]
 
         b, _ = self.p._trial_info[trial]
 
@@ -444,8 +460,7 @@ class Stage1:
         self.b = self.p._iterations[-1][-1]
         assert isinstance(self.b, Bracket)
         self.b._n = len(self.b.current_trials())
-        self.b._s = min(int(np.log(self.b._n) / np.log(self.b._eta)),
-                        self.b._s)
+        self.b._s = min(int(np.log(self.b._n) / np.log(self.b._eta)), self.b._s)
         self.cur_iter = len(self.p._iterations) - 1
         self._num_worker = self.p.num_gpu_resources
         # pending actions
@@ -482,18 +497,24 @@ class Stage1:
 
     def _mps_packing(self, trial_runner):
         print("[MPS]")
-        resource_threshold = 0.5 * self.p.base_rung_runtime_sum[self.cur_iter][
-            self.cur_b]
+        resource_threshold = (
+            0.5 * self.p.base_rung_runtime_sum[self.cur_iter][self.cur_b]
+        )
         sum_for_th = 0
         for idx, trial in enumerate(self.b.current_trials()):
             res = 0.4 if sum_for_th > resource_threshold else 0.6
             odd_even = int(idx / self._num_worker) % 2
-            gpu_idx = (idx % self._num_worker)*((-1) ** odd_even) + odd_even * (self._num_worker - 1)
+            gpu_idx = (idx % self._num_worker) * ((-1) ** odd_even) + odd_even * (
+                self._num_worker - 1
+            )
             gpu_dict = {list(self.p._gpu_resources.keys())[int(gpu_idx)]: res}
-            print("[MPS] Place trial {idx} on {gpu} : {res}".format(
-                idx=trial.trial_id,
-                res=res,
-                gpu=list(self.p._gpu_resources.keys())[int(gpu_idx)]))
+            print(
+                "[MPS] Place trial {idx} on {gpu} : {res}".format(
+                    idx=trial.trial_id,
+                    res=res,
+                    gpu=list(self.p._gpu_resources.keys())[int(gpu_idx)],
+                )
+            )
             sum_for_th += self.p.trial_runtime[self.cur_iter][self.cur_b][idx]
             self._launch_trial(trial, trial_runner, gpu_dict)
 
@@ -508,10 +529,12 @@ class Stage1:
                 small_job_sum_time = 0
                 for i in range(self._num_worker - topk_num):
                     small_job_sum_time += self.p.trial_runtime[self.cur_iter][
-                        self.cur_b][-i]
+                        self.cur_b
+                    ][-i]
                 res = int(
-                    self.p.trial_runtime[self.cur_iter][self.cur_b][idx] /
-                    small_job_sum_time)
+                    self.p.trial_runtime[self.cur_iter][self.cur_b][idx]
+                    / small_job_sum_time
+                )
                 res = max(min(self.MAX_WORKER, self._num_worker, res), 1)
 
                 for j in range(res):
@@ -520,32 +543,41 @@ class Stage1:
                     start_gpu += 1
             else:
                 gpu_idx = start_gpu % self._num_worker
-                gpu_dict = {
-                    list(self.p._gpu_resources.keys())[int(gpu_idx)]: 1
-                }
+                gpu_dict = {list(self.p._gpu_resources.keys())[int(gpu_idx)]: 1}
                 start_gpu += 1
 
-            print("[Bin] Place trial {idx} on {gpu} : {res}".format(
-                idx=trial.trial_id,
-                res=res,
-                gpu=list(self.p._gpu_resources.keys())[int(gpu_idx)]))
+            print(
+                "[Bin] Place trial {idx} on {gpu} : {res}".format(
+                    idx=trial.trial_id,
+                    res=res,
+                    gpu=list(self.p._gpu_resources.keys())[int(gpu_idx)],
+                )
+            )
 
             self._launch_trial(trial, trial_runner, gpu_dict)
-            logger.info("[Bin] Place trial {idx} on {gpu} : 1".format(
-                idx=trial.trial_id,
-                gpu=list(self.p._gpu_resources.keys())[int(gpu_idx)]))
+            logger.info(
+                "[Bin] Place trial {idx} on {gpu} : 1".format(
+                    idx=trial.trial_id,
+                    gpu=list(self.p._gpu_resources.keys())[int(gpu_idx)],
+                )
+            )
 
     def _even_bin_packing(self, trial_runner):
         print("[Bin Packing]", self.p.base_rung_runtime_sum)
-        avg_runtime = self.p.base_rung_runtime_sum[self.cur_iter][
-            self.cur_b] / self.max_trial
-        add_list = [idx for idx, val in
-                    enumerate(self.p.trial_runtime[self.cur_iter][self.cur_b]) if val > avg_runtime]
-        add_worker = min(len(add_list) * self.MAX_WORKER,
-                         self._num_worker) - self.max_trial
+        avg_runtime = (
+            self.p.base_rung_runtime_sum[self.cur_iter][self.cur_b] / self.max_trial
+        )
+        add_list = [
+            idx
+            for idx, val in enumerate(self.p.trial_runtime[self.cur_iter][self.cur_b])
+            if val > avg_runtime
+        ]
+        add_worker = (
+            min(len(add_list) * self.MAX_WORKER, self._num_worker) - self.max_trial
+        )
         res_list = [1 for x in range(self.max_trial)]
         job_id = 0
-        while (add_worker > 0):
+        while add_worker > 0:
             tmp_id = job_id % self.max_trial
             if tmp_id in add_list and res_list[tmp_id] < self.MAX_WORKER:
                 res_list[tmp_id] += 1
@@ -566,17 +598,18 @@ class Stage1:
                 start_gpu += 1
 
             self._launch_trial(trial, trial_runner, gpu_dict)
-            '''
+            """
             logger.info("[Bin] Place trial {idx} on {gpu} : 1".format(
                 idx = trial.trial_id,
                 gpu = list(self.p._gpu_resources.keys())[int(start_gpu)]) )
-            '''
+            """
+
     def on_trial_result(self, trial_runner, trial, result) -> str:
-        '''
+        """
         # check if this trial has finished current rung, if not, simply continue it
         if self.b.continue_trial(trial):
             return TrialScheduler.CONTINUE
-        '''
+        """
 
         self.p.stage = 2
         # now the first trial has finished, transite to stage 2
@@ -619,8 +652,9 @@ class Stage2:
     def _find_scale_trial(self, trials_running):
         print("@Find trials among {}".format(trials_running))
 
-        runtime_time = [(self.p._res_estimator[t])[TIME_THIS_ITER_S]
-                        for t in trials_running]
+        runtime_time = [
+            (self.p._res_estimator[t])[TIME_THIS_ITER_S] for t in trials_running
+        ]
 
         def total_rung(s):
             return self.b._rungs[self.b._live_trials[s].rung].r
@@ -637,8 +671,7 @@ class Stage2:
             return None
 
         longest_trial = trials_running[np.argsort(remaining)[-1]]
-        if len(longest_trial.resources.extra_custom_resources
-               ) >= self.MAX_WORKER - 1:
+        if len(longest_trial.resources.extra_custom_resources) >= self.MAX_WORKER - 1:
             return None
         return longest_trial
 
@@ -651,8 +684,7 @@ class Stage2:
 
     def on_trial_result(self, trial_runner, trial, result) -> str:
         print("stage2 on_trial_result: ", trial)
-        if self._scale_up(trial_runner,
-                          trial) and self.b.continue_trial(trial):
+        if self._scale_up(trial_runner, trial) and self.b.continue_trial(trial):
             print("stage2 scale up: ", trial)
             return TrialScheduler.PAUSE
 
@@ -679,7 +711,9 @@ class Stage2:
                 self.p._unpause_trial(trial_runner, t)
             logger.info(
                 "[Early Promotion] Promote trial {id} with {res}".format(
-                    id=t.trial_id, res=trial.resources))
+                    id=t.trial_id, res=trial.resources
+                )
+            )
 
         # if promotables is None:
         #     self._scale_up(trial_runner, trial)
@@ -694,11 +728,14 @@ class Stage2:
         # if nothing to promote
         # scale up the running trial with longest remaining time
 
-        logger.info("{action} for {trial} on {metric}={metric_val}".format(
-            action=action,
-            trial=trial,
-            metric=self.p._res_name,
-            metric_val=result.get(self.p._res_name)))
+        logger.info(
+            "{action} for {trial} on {metric}={metric_val}".format(
+                action=action,
+                trial=trial,
+                metric=self.p._res_name,
+                metric_val=result.get(self.p._res_name),
+            )
+        )
 
         return action
 

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, NamedTuple
 
-from typing import NamedTuple, TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Dict, Set, Optional, Any, Mapping
+    from typing import Any, Dict, Mapping, Optional, Set
 
 logger = logging.getLogger(__name__)
 
 
 class TrialPerf(NamedTuple):
     """Perf info of a single trial"""
+
     iter_speed: Optional[float]
 
     @property
@@ -22,6 +23,7 @@ class PerfManager:
     """
     Tracks trial performance in a trial group
     """
+
     def __init__(self, trial_ids: Set[str]):
         self.known_trials: Set[str] = trial_ids
         # map trial id to its perf info
@@ -31,8 +33,7 @@ class PerfManager:
 
     @property
     def trials_missing_info(self) -> Set[str]:
-        """Return set of trial ids that are missing perf info
-        """
+        """Return set of trial ids that are missing perf info"""
         # completely unknown
         unknown = self.known_trials.difference(set(self.perf_infos.keys()))
         # incomplete

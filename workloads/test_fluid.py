@@ -2,27 +2,24 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import ray
 import torch
 import torch.optim as optim
-
-import ray
 from ray import tune
-from ray.tune import track, Trainable
+from ray.tune import Trainable, track
+from ray.tune.examples.mnist_pytorch import ConvNet, get_data_loaders, test, train
 from ray.tune.schedulers import ASHAScheduler
-from ray.tune.examples.mnist_pytorch import get_data_loaders, ConvNet, train, test
 
-
-
-from fluid.scheduler import FluidBandScheduler
 from fluid.executor import MyRayTrialExecutor
-
+from fluid.scheduler import FluidBandScheduler
 
 
 def train_mnist(config):
     model = ConvNet()
     train_loader, test_loader = get_data_loaders()
     optimizer = optim.SGD(
-        model.parameters(), lr=config["lr"], momentum=config["momentum"])
+        model.parameters(), lr=config["lr"], momentum=config["momentum"]
+    )
     for i in range(10):
         train(model, optimizer, train_loader)
         acc = test(model, test_loader)
@@ -31,12 +28,14 @@ def train_mnist(config):
             # This saves the model to the trial directory
             torch.save(model, "./model.pth")
 
+
 def train_mnist_bohb(config, model=None):
     if model is None:
         model = ConvNet()
     train_loader, test_loader = get_data_loaders()
     optimizer = optim.SGD(
-        model.parameters(), lr=config["lr"], momentum=config["momentum"])
+        model.parameters(), lr=config["lr"], momentum=config["momentum"]
+    )
     for i in range(10):
         train(model, optimizer, train_loader)
         acc = test(model, test_loader)
@@ -66,6 +65,7 @@ class MyTrainableClass(Trainable):
     def _save(self, checkpoint_dir):
 
         import os
+
         path = os.path.join(checkpoint_dir, "model.pth")
         torch.save(self.model.state_dict(), path)
         return path
@@ -81,30 +81,32 @@ def init_ray():
     # ray.init(address=args.ray_address)
     ray.init()
 
+
 def main():
     try:
         init_ray()
 
         search_space = {
-            "lr": tune.sample_from(lambda spec: 10**(-10 * np.random.rand())),
-            "momentum": tune.uniform(0.1, 0.9)
+            "lr": tune.sample_from(lambda spec: 10 ** (-10 * np.random.rand())),
+            "momentum": tune.uniform(0.1, 0.9),
         }
 
         analysis = tune.run(
             MyTrainableClass,
-            trial_executor = MyRayTrialExecutor(),
+            trial_executor=MyRayTrialExecutor(),
             num_samples=9,
-            scheduler = FluidBandScheduler(),
-            #scheduler=ASHAScheduler(metric="mean_accuracy", mode="max"),
-            config=search_space
+            scheduler=FluidBandScheduler(),
+            # scheduler=ASHAScheduler(metric="mean_accuracy", mode="max"),
+            config=search_space,
         )
 
         dfs = analysis.trial_dataframes
         for logdir, df in dfs.items():
             ld = Path(logdir)
-            df.to_csv(ld / 'trail_dataframe.csv')
+            df.to_csv(ld / "trail_dataframe.csv")
     finally:
         ray.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -16,7 +16,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.6"
+python = ">=3.6.2,<4.0"
 
 ray = {version = "0.8.5", extras = ["tune"]}
 numpy = "*"
@@ -36,7 +36,9 @@ exp = [
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
-flake8 = "*"
+black = "^21.4b0"
+isort = "^5.8.0"
+flake8 = "^3.9.1"
 
 [build-system]
 requires = ["poetry_core>=1.0.0"]
@@ -47,3 +49,7 @@ testpaths = [
     "tests"
 ]
 log_level = "DEBUG"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3

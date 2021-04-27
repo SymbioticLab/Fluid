@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
+import random
 from pathlib import Path
 
-import ray
-from ray.tune import Stopper
-
 import numpy as np
-import random
+import ray
 import torch
-import logging
-
+from ray.tune import Stopper
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +18,8 @@ def init_ray():
     grp = parser.add_mutually_exclusive_group()
     grp.add_argument("-r", "--ray-address", default="auto")
     grp.add_argument("-l", "--local", action="store_true")
-    grp.add_argument("-w", "--exp", default=1,  type=int)
-    grp.add_argument("-s", "--seed", default=12345,  type=int)
+    grp.add_argument("-w", "--exp", default=1, type=int)
+    grp.add_argument("-s", "--seed", default=12345, type=int)
     args = parser.parse_args()
     ray.init(address=None if args.local else args.ray_address)
 
@@ -36,13 +34,12 @@ def init_ray():
     torch.cuda.manual_seed(args.seed)
 
     logging.basicConfig(
-        level=logging.DEBUG,
-        format='[%(asctime)s][%(name)s][%(levelname)s] %(message)s'
+        level=logging.DEBUG, format="[%(asctime)s][%(name)s][%(levelname)s] %(message)s"
     )
     logger.info("Init ray finished")
     for name in logging.root.manager.loggerDict:
         l = logging.getLogger(name)
-        if name.startswith('fluid') or name.startswith('workloads'):
+        if name.startswith("fluid") or name.startswith("workloads"):
             l.setLevel(logging.DEBUG)
         else:
             l.setLevel(logging.INFO)
@@ -52,38 +49,38 @@ def init_ray():
 
 
 def remove_prefix(text, prefix):
-    return text[text.startswith(prefix) and len(prefix):]
+    return text[text.startswith(prefix) and len(prefix) :]
 
 
 def detect_paths():
     tries = [
-        '/nfs',
-        '/tmp',
+        "/nfs",
+        "/tmp",
     ]
     for base in tries:
         base = Path(base)
         if base.is_dir():
-            return str(base / 'data'), str(base / 'ray_results')
+            return str(base / "data"), str(base / "ray_results")
     raise ValueError("Can't find a suitable location to store data")
 
 
 def detect_baseline_resource():
-    num_gpu = ray.cluster_resources().get('GPU', 0)
+    num_gpu = ray.cluster_resources().get("GPU", 0)
     if num_gpu > 0:
-        return {'cpu': 1, 'gpu': 1}
+        return {"cpu": 1, "gpu": 1}
     else:
-        return {'cpu': 1}
+        return {"cpu": 1}
 
 
 def run_options(rootfilepath):
     _, results_path = detect_paths()
-    sync_to_driver = not results_path.startswith('/nfs')
-    name = remove_prefix(Path(rootfilepath).stem, 'tune_')
+    sync_to_driver = not results_path.startswith("/nfs")
+    name = remove_prefix(Path(rootfilepath).stem, "tune_")
     return {
-        'name': name,
-        'local_dir': results_path,
-        'num_samples': int(1e10),
-        'sync_to_driver': sync_to_driver,
+        "name": name,
+        "local_dir": results_path,
+        "num_samples": int(1e10),
+        "sync_to_driver": sync_to_driver,
     }
 
 
@@ -101,15 +98,14 @@ def create_cap_explore_fn(mutations, spec):
 
 class MetricStopper(Stopper):
     def __init__(self, target, metric, mode):
-        if mode not in ['min', 'max']:
-            raise ValueError('Invalid mode')
+        if mode not in ["min", "max"]:
+            raise ValueError("Invalid mode")
         self.op = {
-            'min': lambda a, b: np.nanmin([a, b]),
-            'max': lambda a, b: np.nanmax([a, b]),
+            "min": lambda a, b: np.nanmin([a, b]),
+            "max": lambda a, b: np.nanmax([a, b]),
         }[mode]
         self.metric = metric
         self.target = target
-
 
         self.current_best = None
 
@@ -135,8 +131,16 @@ class MetricStopper(Stopper):
         toStop = new_best == self.current_best
 
         if toStop:
-            logger.info("Stopper: current best %f, reaches target %f, stop", self.current_best, self.target)
+            logger.info(
+                "Stopper: current best %f, reaches target %f, stop",
+                self.current_best,
+                self.target,
+            )
         else:
-            logger.info("Stopper: current best %f, does not reach target %f, continue", self.current_best, self.target)
+            logger.info(
+                "Stopper: current best %f, does not reach target %f, continue",
+                self.current_best,
+                self.target,
+            )
 
         return toStop

@@ -1,32 +1,32 @@
 import os
 import urllib.request
 
+import ConfigSpace as CS
 import numpy as np
-from ray.util.sgd.torch.examples.dcgan import model_creator, optimizer_creator, GANOperator as RayGANOperator
-from ray.util.sgd.utils import BATCH_SIZE
-from ray import tune
 import torch
 import torch.nn as nn
+from ray import tune
+from ray.util.sgd.torch.examples.dcgan import GANOperator as RayGANOperator
+from ray.util.sgd.torch.examples.dcgan import model_creator, optimizer_creator
+from ray.util.sgd.utils import BATCH_SIZE
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-import ConfigSpace as CS
-
 
 import workloads.common as com
 
 __all__ = [
-    'data_creator',
-    'model_creator',
-    'loss_creator',
-    'optimizer_creator',
-    'GANOperator',
-    'init_dcgan',
-    'create_sample_space',
-    'create_search_space',
-    'create_ch',
-    'create_stopper',
-    'exp_metric',
-    'static_config',
+    "data_creator",
+    "model_creator",
+    "loss_creator",
+    "optimizer_creator",
+    "GANOperator",
+    "init_dcgan",
+    "create_sample_space",
+    "create_search_space",
+    "create_ch",
+    "create_stopper",
+    "exp_metric",
+    "static_config",
 ]
 
 
@@ -41,7 +41,7 @@ def static_config():
 
 
 def exp_metric():
-    #return dict(metric="loss_sum", mode="min")
+    # return dict(metric="loss_sum", mode="min")
     return dict(metric="inception", mode="max")
 
 
@@ -53,15 +53,16 @@ def data_creator(config):
     dataset = datasets.MNIST(
         DATA_PATH,
         download=True,
-        transform=transforms.Compose([
-            transforms.Resize(32),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, ), (0.5, )),
-        ]))
-    dataloader = DataLoader(
-        dataset, batch_size=config.get(BATCH_SIZE, 32))
+        transform=transforms.Compose(
+            [
+                transforms.Resize(32),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5,), (0.5,)),
+            ]
+        ),
+    )
+    dataloader = DataLoader(dataset, batch_size=config.get(BATCH_SIZE, 32))
     return dataloader, []
-
 
 
 def loss_creator(config):
@@ -98,7 +99,7 @@ class GANOperator(RayGANOperator):
         # self.device is set automatically
         real_cpu = batch[0].to(self.device)
         batch_size = real_cpu.size(0)
-        label = torch.full((batch_size, ), real_label, device=self.device)
+        label = torch.full((batch_size,), real_label, device=self.device)
         output = discriminator(real_cpu).view(-1)
         errD_real = self.criterion(output, label)
         errD_real.backward()
@@ -109,7 +110,8 @@ class GANOperator(RayGANOperator):
             self.config.get("latent_vector_size", 100),
             1,
             1,
-            device=self.device)
+            device=self.device,
+        )
         fake = generator(noise)
         label.fill_(fake_label)
         output = discriminator(fake.detach()).view(-1)
@@ -140,10 +142,8 @@ class GANOperator(RayGANOperator):
             "loss_g": errG.item(),
             "loss_d": errD.item(),
             "inception": is_score,
-            "num_samples": batch_size
+            "num_samples": batch_size,
         }
-
-
 
     def validate(self, batch, info):
         return {}
@@ -157,45 +157,48 @@ def init_dcgan():
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
         urllib.request.urlretrieve(
             "https://github.com/ray-project/ray/raw/master/python/ray/tune/"
-            "examples/pbt_dcgan_mnist/mnist_cnn.pt", MODEL_PATH)
+            "examples/pbt_dcgan_mnist/mnist_cnn.pt",
+            MODEL_PATH,
+        )
 
 
 def create_sample_space():
     mutations = {
-        'netG_lr': lambda *_: np.random.uniform(0.0001, 0.0005),
-        'netD_lr': lambda *_: np.random.uniform(0.0001, 0.0005),
+        "netG_lr": lambda *_: np.random.uniform(0.0001, 0.0005),
+        "netD_lr": lambda *_: np.random.uniform(0.0001, 0.0005),
     }
 
-    cap_explore = com.create_cap_explore_fn(mutations, [
-        ('netG_lr', 0.0001, 0.0005),
-        ('netD_lr', 0.0001, 0.0005),
-    ])
+    cap_explore = com.create_cap_explore_fn(
+        mutations,
+        [
+            ("netG_lr", 0.0001, 0.0005),
+            ("netD_lr", 0.0001, 0.0005),
+        ],
+    )
 
     return mutations, cap_explore
 
 
 def create_search_space():
-    return {
-        key: tune.sample_from(val)
-        for key, val in create_sample_space()[0].items()
-    }
+    return {key: tune.sample_from(val) for key, val in create_sample_space()[0].items()}
 
 
 def create_ch():
     # BOHB uses ConfigSpace for their hyperparameter search space
     config_space = CS.ConfigurationSpace()
 
-    config_space.add_hyperparameter(CS.UniformFloatHyperparameter(name="netG_lr", lower=0.0001, upper=0.0005))
-    config_space.add_hyperparameter(CS.UniformFloatHyperparameter(name="netD_lr", lower=0.0001, upper=0.0005))
+    config_space.add_hyperparameter(
+        CS.UniformFloatHyperparameter(name="netG_lr", lower=0.0001, upper=0.0005)
+    )
+    config_space.add_hyperparameter(
+        CS.UniformFloatHyperparameter(name="netD_lr", lower=0.0001, upper=0.0005)
+    )
 
     return config_space
 
 
 def create_skopt_space():
-    return [
-        (0.0001, 0.0005),
-        (0.0001, 0.0005),
-    ], [
-        'netG_lr',
-        'netD_lr',
+    return [(0.0001, 0.0005), (0.0001, 0.0005),], [
+        "netG_lr",
+        "netD_lr",
     ]

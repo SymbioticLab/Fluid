@@ -10,22 +10,24 @@ from ray.tune.trial import Trial
 from ray.tune.trial_runner import TrialRunner
 from ray.tune.web_server import TuneServer
 
-class MyTrialRunner(TrialRunner) :
 
-    def __init__(self,
-                 search_alg=None,
-                 scheduler=None,
-                 launch_web_server=False,
-                 local_checkpoint_dir=None,
-                 remote_checkpoint_dir=None,
-                 sync_to_cloud=None,
-                 stopper=None,
-                 resume=False,
-                 server_port=TuneServer.DEFAULT_PORT,
-                 fail_fast=False,
-                 verbose=True,
-                 checkpoint_period=10,
-                 trial_executor=None):
+class MyTrialRunner(TrialRunner):
+    def __init__(
+        self,
+        search_alg=None,
+        scheduler=None,
+        launch_web_server=False,
+        local_checkpoint_dir=None,
+        remote_checkpoint_dir=None,
+        sync_to_cloud=None,
+        stopper=None,
+        resume=False,
+        server_port=TuneServer.DEFAULT_PORT,
+        fail_fast=False,
+        verbose=True,
+        checkpoint_period=10,
+        trial_executor=None,
+    ):
         super(MyTrialRunner, self).__init__()
 
     def _execute_action(self, trial, decision):
