@@ -17,7 +17,7 @@ Then make sure [Nvidia MPS](https://docs.nvidia.com/deploy/mps/index.html#topic_
 To use `Fluid` in Ray Tune, pass an instance of it as an additional keyword argument to `tune.run`:
 
 ```python
-from fluid.executor import MyRayTrialExecutor
+from fluid.executor import FluidExecutor
 from fluid.scheduler import FluidBandScheduler
 tune.run(
     MyTrainable,
