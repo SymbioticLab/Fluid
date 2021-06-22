@@ -45,9 +45,7 @@ class PerfManager:
         return unknown.union(incomplete)
 
     def get_height(self, trial_id: str, width: float) -> float:
-        # TODO
-        raise NotImplementedError
+        return self.perf_infos[trial_id].iter_speed / width
 
     def on_trial_result(self, trial_id: str, result: Mapping[str, Any]) -> None:
-        # TODO
-        raise NotImplementedError
+        self.perf_infos[trial_id].iter_speed = result['last_train_iter_s']

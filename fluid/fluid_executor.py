@@ -121,6 +121,7 @@ class FluidExecutor(TrialExecutor):
         assigned, unassigned = partition(
             self.jobs_pending, lambda p: p.trial.trial_id in self.trial_groups
         )
+        self.jobs_pending.clear()
         unassigned = list(unassigned)
         assigned = list(assigned)
         if unassigned:
@@ -135,7 +136,7 @@ class FluidExecutor(TrialExecutor):
             for p in unassigned:
                 self.trial_groups[p.trial.trial_id] = TrialAndGroup(p.trial, meta.grp)
             # allocate reousrces
-            self._static_fluid(meta)
+            self._fluid(meta)
         else:
             logger.debug("No new group")
 
@@ -143,12 +144,9 @@ class FluidExecutor(TrialExecutor):
             # find each group with pending jobs and do dynamic
             groups = {self._find_group(p.trial) for p in assigned}
             for meta in groups:
-                self._dynamic_fluid(meta)
+                self._fluid(meta)
         else:
             logger.debug("No change in existing groups")
-
-        # down with the pending, clear it
-        self.jobs_pending.clear()
 
     def _dump_groups(self):
         """Dump group info for debugging"""
@@ -177,8 +175,8 @@ class FluidExecutor(TrialExecutor):
                 used = resources_add(used, job.resources)
         return used
 
-    def _static_fluid(self, meta: TrialGroupMeta):
-        """Run static fluid on a specific group"""
+    def _fluid(self, meta: TrialGroupMeta):
+        """Run fluid on a specific group"""
         self._dump_groups()
         # set of trials to consider
         A = {trial.trial_id for trial in self._trial_group(meta.grp)}
@@ -206,7 +204,6 @@ class FluidExecutor(TrialExecutor):
                 M = Mp
                 W[tid] = r
         else:
-            # staticFluid
             # convert A to array for sorting
             A = np.array(list(A))
             # reference height (1 width)
@@ -231,47 +228,46 @@ class FluidExecutor(TrialExecutor):
             # write to W
             W = dict(zip(A, w))
 
-        self._ensure_W(W)
+        self._ensure_W(W, meta)
 
-    def _dynamic_fluid(self, meta: TrialGroupMeta):
-        """Re-compute and apply allocation changes"""
-        self._dump_groups()
-
-        # XXX: placeholder below
-        temp = []
-        for pending in self.jobs_pending:
-            pending = self.jobs_pending.pop()
-
-            if Resources.subtract(
-                self.idle_resources, pending.trial.resources
-            ).is_nonnegative():
-                self._kickoff(pending, pending.trial.resources)
-            else:
-                temp.append(pending)
-        self.jobs_pending.extend(temp)
-        # XXX: placeholder above
-
-        # TODO: MPS & bin packing, modify pending/running queue
-
-        # TODO: diff the pending and to_stop queue, modify them according to the plan above
-
-        # TODO: step 2. for every running, adjust resource
-        # TODO: step 3. call _kickoff for every pending, note that it may be None if failed to start
-
-    def _ensure_W(self, W: np.array):
+    def _ensure_W(self, W: Dict[str, Resources], meta: TrialGroupMeta):
         """Adjust group resources given in W"""
         # stop any trials with 0 res
-        # this has to be down first to free up resources for others to use
-        # TODO: add to paused, then ensure_stop, we do not change trial's status which is visible outside
-        running = None
-        self.jobs_paused[running.in_flight_future] = running
-        self._ensure_stop(running.trial)
-        # TODO: adjust any trials with fewer res
-        # TODO: kickoff any trials with >0 res, but not already running
-        # use trial group to map trial_id to trial
-        # construct PendingJob and use _kickoff to start the trial
-        # TODO: adjust any trials with more res
-        raise NotImplementedError
+        # this has to be done first to free up resources for others to use
+        for trial_id, res in W.items():
+            trial = meta.trials[trial_id]
+            if res.cpu_total() + res.gpu_total() == 0:
+                # add to paused, then ensure_stop, we do not change trial's status which is visible outside
+                running = self._find_running(trial)
+                if running is not None:
+                    self.jobs_paused[running.in_flight_future] = running
+                    self._ensure_stop(running.trial)
+                else:
+                    trial.resources = res
+                    self.start_trial(trial)
+        # adjust any trials with different res, including any not already running
+        for trial_id, res in W.items():
+            # use trial group to map trial_id to trial
+            trial = meta.trials[trial_id]
+
+            if res.cpu_total() + res.gpu_total() == 0:
+                continue
+
+            running = self._find_running(trial)
+            if (
+                running is not None
+                and (
+                    # trial.resources != res
+                    Resources.subtract(trial.resources, res).is_nonnegative()
+                    != Resources.subtract(res, trial.resources).is_nonnegative()
+                )
+            ):
+                self.jobs_paused[running.in_flight_future] = running
+                self._ensure_stop(running.trial)
+
+            # construct PendingJob and use _kickoff to start the trial
+            pending = PendingJob(trial, None, True)
+            self._kickoff(pending, res)
 
     def _find_group(self, trial: Trial) -> TrialGroupMeta:
         return self.trial_group_meta[self.trial_groups[trial.trial_id].group]
@@ -279,23 +275,23 @@ class FluidExecutor(TrialExecutor):
     def _trial_group(self, grp: int) -> List[Trial]:
         return [v.trial for v in self.trial_groups.values() if v.group == grp]
 
-    def _find_paused(self, trial) -> Optional[RunningJob]:
+    def _find_paused(self, trial: Trial) -> Optional[RunningJob]:
         for job in self.jobs_paused.values():
             if job.trial == trial:
                 return job
 
-    def _pop_paused(self, trial) -> Optional[RunningJob]:
+    def _pop_paused(self, trial: Trial) -> Optional[RunningJob]:
         for fut, job in self.jobs_paused.items():
             if job.trial == trial:
                 assert fut == job.in_flight_future
                 return self.jobs_paused.pop(fut)
 
-    def _find_running(self, trial) -> Optional[RunningJob]:
+    def _find_running(self, trial: Trial) -> Optional[RunningJob]:
         for _, job in self.jobs_running.items():
             if job.trial == trial:
                 return job
-
-    def _find_pending(self, trial) -> Optional[PendingJob]:
+    
+    def _find_pending(self, trial: Trial) -> Optional[PendingJob]:
         for job in self.jobs_pending:
             if job.trial == trial:
                 return job
@@ -435,7 +431,9 @@ class FluidExecutor(TrialExecutor):
             if prior_status not in [Trial.RUNNING, Trial.ERROR]:
                 assert False, "trial status invalid"
 
-        # TODO: remove from trial group
+        # remove from trial group
+        group = self._find_group(trial)
+        del group.trials[trial.trial_id]
 
         try:
             trial.write_error_log(error_msg)
