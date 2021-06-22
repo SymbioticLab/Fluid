@@ -14,7 +14,7 @@ Then make sure [Nvidia MPS](https://docs.nvidia.com/deploy/mps/index.html#topic_
 
 `Fluid` itself is a normal python package that can be installed by `pip install fluidexec`. Note that the pypi package name is `fluidexec` because the name `fluid` is already taken.
 
-To use `Fluid` in Ray Tune, pass an instance of it as the trial executor to `tune.run`:
+To use `Fluid` in Ray Tune, pass an instance of it as the trial executor to `tune.run`. It should work with any other schedulers:
 
 ```python
 from fluid.executor import FluidExecutor
