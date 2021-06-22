@@ -147,19 +147,24 @@ class FluidExecutorTest(unittest.TestCase):
         trial.last_result = self.trial_executor.fetch_result(trial)
         self.assertEqual(trial.last_result.get(TRAINING_ITERATION), 1)
 
+        print("Pausing trial")
         self.trial_executor.pause_trial(trial)
         self.assertEqual(Trial.PAUSED, trial.status)
 
+        print("Unpausing trial")
         self.trial_executor.unpause_trial(trial)
         self.assertEqual(Trial.PENDING, trial.status)
 
+        print("Start trial again")
         self.trial_executor.start_trial(trial)
         self.trial_executor.on_no_available_trials(None)
         self.assertEqual(Trial.RUNNING, trial.status)
 
+        print("fetch result")
         trial.last_result = self.trial_executor.fetch_result(trial)
         self.assertEqual(trial.last_result.get(TRAINING_ITERATION), 2)
 
+        print("stop trial")
         self.trial_executor.stop_trial(trial)
         self.assertEqual(Trial.TERMINATED, trial.status)
 
@@ -245,14 +250,3 @@ class FluidExecutorQueueTest(unittest.TestCase):
 
         gpu_only = create_trial(0, 1)
         self.assertTrue(self.trial_executor.has_resources(gpu_only.resources))
-
-
-class LocalModeExecutorTest(FluidExecutorTest):
-    def setUp(self):
-        _register_all()  # for __fake
-        ray.init(local_mode=True)
-        self.trial_executor = FluidExecutor()
-
-    def tearDown(self):
-        ray.shutdown()
-        _register_all()  # re-register the evicted objects

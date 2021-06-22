@@ -59,8 +59,6 @@ class PendingJob(NamedTuple):
 class RunningJob(NamedTuple):
     trial: Trial
     in_flight_future: ray.ObjectID
-    # committed resources
-    resources: Resources
 
 
 class TrialAndGroup(NamedTuple):
@@ -116,14 +114,14 @@ class FluidExecutor(TrialExecutor):
         """Go over pending jobs, and assign trialgroup to them if not already done.
         If new groups are discovered, otherwise run static
         """
-        logger.debug("_detect_groups")
+        logger.debug(f"_detect_groups: {self.jobs_pending = } {self.trial_groups = }")
         # pending may already be assigned a group if it's an unpaused trial
         assigned, unassigned = partition(
             self.jobs_pending, lambda p: p.trial.trial_id in self.trial_groups
         )
-        self.jobs_pending.clear()
         unassigned = list(unassigned)
         assigned = list(assigned)
+        self.jobs_pending.clear()
         if unassigned:
             meta = TrialGroupMeta(
                 self.num_trial_groups,
@@ -172,7 +170,7 @@ class FluidExecutor(TrialExecutor):
         used = Resources(cpu=0, gpu=0)
         for job in self.jobs_running.values():
             if job.trial.trial_id in self.trial_groups:
-                used = resources_add(used, job.resources)
+                used = resources_add(used, job.trial.resources)
         return used
 
     def _fluid(self, meta: TrialGroupMeta):
@@ -225,17 +223,21 @@ class FluidExecutor(TrialExecutor):
             w = np.minimum(
                 np.maximum(np.floor(H1 * np.size(H1) / np.sum(H1)), 1 / c), d
             )
+            # assign resources based on w
+            w = w / w.sum() * self._avail_resources.gpu_total()
+            resW = [Resources(cpu=1, gpu=g) for g in w]
             # write to W
-            W = dict(zip(A, w))
+            W = dict(zip(A, resW))
 
         self._ensure_W(W, meta)
 
     def _ensure_W(self, W: Dict[str, Resources], meta: TrialGroupMeta):
         """Adjust group resources given in W"""
+        logger.debug(f"ensure_W: {meta.trials =}")
         # stop any trials with 0 res
         # this has to be done first to free up resources for others to use
         for trial_id, res in W.items():
-            trial = meta.trials[trial_id]
+            trial = self.trial_groups[trial_id].trial
             if res.cpu_total() + res.gpu_total() == 0:
                 # add to paused, then ensure_stop, we do not change trial's status which is visible outside
                 running = self._find_running(trial)
@@ -248,7 +250,7 @@ class FluidExecutor(TrialExecutor):
         # adjust any trials with different res, including any not already running
         for trial_id, res in W.items():
             # use trial group to map trial_id to trial
-            trial = meta.trials[trial_id]
+            trial = self.trial_groups[trial_id].trial
 
             if res.cpu_total() + res.gpu_total() == 0:
                 continue
@@ -370,7 +372,7 @@ class FluidExecutor(TrialExecutor):
 
             # if is restoring
             if trial.is_restoring:
-                assert restore_job is not None
+                # assert restore_job is not None
                 return restore_job
 
             # actually start train op
@@ -423,14 +425,13 @@ class FluidExecutor(TrialExecutor):
             self.jobs_running.pop(j.in_flight_future)
             if release_resources:
                 logger.debug("Trial %s: Returning resources.", trial)
-                self._return_resources(j.resources)
+                self._return_resources(trial.resources)
         if in_flight:
             if prior_status not in [Trial.RUNNING, Trial.ERROR]:
                 assert False, "trial status invalid"
 
         # remove from trial group
-        group = self._find_group(trial)
-        del group.trials[trial.trial_id]
+        # del self.trial_groups[trial.trial_id]
 
         try:
             trial.write_error_log(error_msg)
@@ -461,7 +462,7 @@ class FluidExecutor(TrialExecutor):
         logger.debug("stop_trial %s", trial)
         self._ensure_stop(trial, error, error_msg, stop_logger)
         meta = self._find_group(trial)
-        self._dynamic_fluid(meta)
+        self._fluid(meta)
 
     def continue_training(self, trial):
         # this is called after got results from a trial,
@@ -555,9 +556,10 @@ class FluidExecutor(TrialExecutor):
         if isinstance(result, _LocalWrapper):
             result = result.unwrap()
 
-        # notify trial group
-        meta = self._find_group(trial)
-        meta.perf.on_trial_result(trial.trial_id, result)
+        if isinstance(result, dict):
+            # notify trial group
+            meta = self._find_group(trial)
+            meta.perf.on_trial_result(trial.trial_id, result)
         return result
 
     def debug_string(self):
@@ -804,7 +806,8 @@ def _change_working_directory(trial: Trial):
     if ray.worker._mode() == ray.worker.LOCAL_MODE:
         old_dir = os.getcwd()
         try:
-            os.chdir(trial.logdir)
+            if trial.logdir is not None:
+                os.chdir(trial.logdir)
             yield
         finally:
             os.chdir(old_dir)
@@ -821,4 +824,4 @@ def resources_add(a: Resources, b: Resources) -> Resources:
 def partition(iterable: Iterable[T], pred) -> Tuple[Iterable[T], Iterable[T]]:
     """Partition an iterable into two with given pred"""
     t1, t2 = itertools.tee(iterable)
-    return itertools.filterfalse(pred, t1), filter(pred, t2)
+    return filter(pred, t1), filter(lambda p: not pred(p), t2)

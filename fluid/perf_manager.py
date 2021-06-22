@@ -9,10 +9,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class TrialPerf(NamedTuple):
+class TrialPerf:
     """Perf info of a single trial"""
 
-    iter_speed: Optional[float]
+    def __init__(self):
+        self.iter_speed: Optional[float] = None
 
     @property
     def is_complete(self) -> bool:
@@ -48,4 +49,6 @@ class PerfManager:
         return self.perf_infos[trial_id].iter_speed / width
 
     def on_trial_result(self, trial_id: str, result: Mapping[str, Any]) -> None:
-        self.perf_infos[trial_id].iter_speed = result["last_train_iter_s"]
+        if trial_id not in self.perf_infos:
+            self.perf_infos[trial_id] = TrialPerf()
+        self.perf_infos[trial_id].iter_speed = result["time_this_iter_s"]
