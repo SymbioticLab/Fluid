@@ -48,4 +48,4 @@ class PerfManager:
         return self.perf_infos[trial_id].iter_speed / width
 
     def on_trial_result(self, trial_id: str, result: Mapping[str, Any]) -> None:
-        self.perf_infos[trial_id].iter_speed = result['last_train_iter_s']
+        self.perf_infos[trial_id].iter_speed = result["last_train_iter_s"]

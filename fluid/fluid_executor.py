@@ -254,13 +254,10 @@ class FluidExecutor(TrialExecutor):
                 continue
 
             running = self._find_running(trial)
-            if (
-                running is not None
-                and (
-                    # trial.resources != res
-                    Resources.subtract(trial.resources, res).is_nonnegative()
-                    != Resources.subtract(res, trial.resources).is_nonnegative()
-                )
+            if running is not None and (
+                # trial.resources != res
+                Resources.subtract(trial.resources, res).is_nonnegative()
+                != Resources.subtract(res, trial.resources).is_nonnegative()
             ):
                 self.jobs_paused[running.in_flight_future] = running
                 self._ensure_stop(running.trial)
@@ -290,7 +287,7 @@ class FluidExecutor(TrialExecutor):
         for _, job in self.jobs_running.items():
             if job.trial == trial:
                 return job
-    
+
     def _find_pending(self, trial: Trial) -> Optional[PendingJob]:
         for job in self.jobs_pending:
             if job.trial == trial:
