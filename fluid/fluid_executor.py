@@ -114,7 +114,9 @@ class FluidExecutor(TrialExecutor):
         """Go over pending jobs, and assign trialgroup to them if not already done.
         If new groups are discovered, otherwise run static
         """
-        logger.debug(f"_detect_groups: {self.jobs_pending = } {self.trial_groups = }")
+        logger.debug(
+            f"_detect_groups: self.jobs_pending={self.jobs_pending} self.trial_groups={self.trial_groups}"
+        )
         # pending may already be assigned a group if it's an unpaused trial
         assigned, unassigned = partition(
             self.jobs_pending, lambda p: p.trial.trial_id in self.trial_groups
@@ -233,7 +235,7 @@ class FluidExecutor(TrialExecutor):
 
     def _ensure_W(self, W: Dict[str, Resources], meta: TrialGroupMeta):
         """Adjust group resources given in W"""
-        logger.debug(f"ensure_W: {meta.trials =}")
+        logger.debug(f"ensure_W: meta.trials={meta.trials}")
         # stop any trials with 0 res
         # this has to be done first to free up resources for others to use
         for trial_id, res in W.items():

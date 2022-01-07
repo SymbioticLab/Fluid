@@ -16,7 +16,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.6.2,<4.0"
+python = ">=3.7,<4.0"
 
 ray = {version = "0.8.5", extras = ["tune"]}
 numpy = "*"
@@ -38,7 +38,7 @@ exp = [
 pytest = "^6.2"
 black = "^21.4b0"
 isort = "^5.8.0"
-flake8 = "^3.9.1"
+flake8 = "^4.0.1"
 gym = "^0.18.0"
 dm-tree = "^0.1.6"
 opencv-python = "^4.5.1"
