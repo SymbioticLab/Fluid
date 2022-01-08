@@ -5,7 +5,7 @@ Created on Thu Jun 11 14:52:48 2020
 
 @author: liujiachen
 """
-
+import os
 from pathlib import Path
 
 from ray import tune
@@ -19,8 +19,6 @@ from workloads.common import mnist_upgrade as workload
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, "tune_")
-
-import os
 
 
 def sched_algo():

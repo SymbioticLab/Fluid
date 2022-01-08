@@ -6,11 +6,8 @@ Created on Thu Jun 11 14:52:48 2020
 @author: liujiachen
 """
 
-import random
 from pathlib import Path
 
-import numpy as np
-import torch
 from ray import tune
 
 # from ray.tune.schedulers.hb_bohb import HyperBandForBOHB

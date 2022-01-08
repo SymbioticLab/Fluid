@@ -9,7 +9,7 @@ from ray.rllib import _register_all
 
 # from ray.rllib import _register_all
 from ray.tune import Trainable
-from ray.tune.registry import TRAINABLE_CLASS, _global_registry, register_trainable
+from ray.tune.registry import TRAINABLE_CLASS, _global_registry
 from ray.tune.resources import Resources
 from ray.tune.result import TRAINING_ITERATION
 from ray.tune.suggest import BasicVariantGenerator

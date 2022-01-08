@@ -12,7 +12,6 @@ import logging
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
-import ray
 from ray.tune.result import TIME_THIS_ITER_S
 from ray.tune.trial import Trial
 

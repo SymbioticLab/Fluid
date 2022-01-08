@@ -145,7 +145,7 @@ def create_sample_space():
         "bptt": lambda *_: np.random.randint(30, 41),
         "clip": lambda *_: np.random.uniform(0.1, 0.5),
         "model": ["RNN_TANH", "RNN_RELU", "LSTM", "GRU"],
-        #'model': ["RNN_TANH", "RNN_RELU", "LSTM", "GRU", "Transformer"],
+        # 'model': ["RNN_TANH", "RNN_RELU", "LSTM", "GRU", "Transformer"],
         # half_emsize is multiplied by 2 * nhead to get emsize, and the conceptual range is 100, 300
         "half_emsize": lambda *_: np.random.randint(25, 76),
         "nhead": lambda *_: np.random.randint(1, 3),

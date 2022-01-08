@@ -12,11 +12,6 @@ from workloads.common import cifar as workload
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, "tune_")
 
-import random
-
-import numpy as np
-import torch
-
 
 def setup_tune_scheduler():
     ss, custom_explore = workload.create_sample_space()

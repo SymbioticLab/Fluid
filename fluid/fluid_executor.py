@@ -16,31 +16,20 @@ from ray import ray_constants
 from ray.exceptions import RayTimeoutError
 from ray.resource_spec import ResourceSpec
 from ray.tune.durable_trainable import DurableTrainable
-from ray.tune.error import AbortTrialExecution, TuneError
+from ray.tune.error import AbortTrialExecution
 from ray.tune.logger import NoopLogger
 from ray.tune.ray_trial_executor import _LocalWrapper, _to_gb, _TrialCleanup
 from ray.tune.resources import Resources
-from ray.tune.result import TIME_THIS_ITER_S, TRAINING_ITERATION, TRIAL_INFO
+from ray.tune.result import TRIAL_INFO
 from ray.tune.trainable import TrainableUtil
 from ray.tune.trial import Checkpoint, Location, Trial, TrialInfo
 from ray.tune.trial_executor import TrialExecutor
 
 from .perf_manager import PerfManager
-from .ray_custom_gpu_res import create_custom_gpu_res, gpu_idx_from_name
+from .ray_custom_gpu_res import create_custom_gpu_res
 
 if TYPE_CHECKING:
-    from typing import (
-        Any,
-        Dict,
-        Iterable,
-        List,
-        Optional,
-        Set,
-        Tuple,
-        TypedDict,
-        TypeVar,
-        Union,
-    )
+    from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar
 
     T = TypeVar("T")
 

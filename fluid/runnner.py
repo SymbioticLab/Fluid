@@ -5,7 +5,7 @@ Created on Sun Jun 21 01:51:33 2020
 
 @author: liujiachen
 """
-from ray.tune.schedulers import FIFOScheduler, TrialScheduler
+from ray.tune.schedulers import TrialScheduler
 from ray.tune.trial import Trial
 from ray.tune.trial_runner import TrialRunner
 from ray.tune.web_server import TuneServer

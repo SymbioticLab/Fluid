@@ -6,16 +6,13 @@ Created on Mon Jul 13 04:16:34 2020
 @author: liujiachen
 """
 import logging
+import os
 
 import numpy as np
-import ray
 from ray.tune.schedulers import AsyncHyperBandScheduler
 from ray.tune.trial import Trial
 
 logger = logging.getLogger(__name__)
-
-
-import os
 
 
 def sched_algo():

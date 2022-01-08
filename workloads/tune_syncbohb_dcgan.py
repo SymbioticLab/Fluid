@@ -4,13 +4,12 @@ from ray import tune
 from ray.tune.suggest.bohb import TuneBOHB
 
 import workloads.common as com
+from fluid.syncbohb import SyncBOHB
 from fluid.trainer import TorchTrainer
 from workloads.common import dcgan as workload
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, "tune_")
-
-from fluid.syncbohb import SyncBOHB
 
 
 def setup_tune_scheduler(num_worker):

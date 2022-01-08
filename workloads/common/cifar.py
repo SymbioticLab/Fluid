@@ -8,10 +8,7 @@ Created on Tue Aug 11 12:30:05 2020
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from ray import tune
-from ray.util.sgd.utils import BATCH_SIZE
-from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 import workloads.common as com

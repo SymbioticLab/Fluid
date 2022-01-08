@@ -9,17 +9,10 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
 
 import numpy as np
-from ray.tune.error import TuneError
-from ray.tune.result import TIME_THIS_ITER_S, TRAINING_ITERATION
 from ray.tune.schedulers import HyperBandForBOHB
 from ray.tune.trial import Trial
-
-if TYPE_CHECKING:
-    from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypedDict, Union
-
 
 logger = logging.getLogger(__name__)
 

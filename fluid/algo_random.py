@@ -3,7 +3,6 @@ import itertools
 from ray.tune.config_parser import create_trial_from_spec, make_parser
 from ray.tune.error import TuneError
 from ray.tune.experiment import convert_to_experiment_list
-from ray.tune.suggest.bohb import TuneBOHB as OrigTuneBOHB
 from ray.tune.suggest.search import SearchAlgorithm
 from ray.tune.suggest.variant_generator import (
     flatten_resolved_vars,

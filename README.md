@@ -17,7 +17,7 @@ Then make sure [Nvidia MPS](https://docs.nvidia.com/deploy/mps/index.html#topic_
 To use `Fluid` in Ray Tune, pass an instance of it as the trial executor to `tune.run`. It should work with any other schedulers:
 
 ```python
-from fluid.executor import FluidExecutor
+from fluid.fliud_executor import FluidExecutor
 tune.run(
     MyTrainable,
     trial_executor=FluidExecutor(),

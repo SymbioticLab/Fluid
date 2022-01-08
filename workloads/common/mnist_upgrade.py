@@ -7,12 +7,10 @@ Created on Thu Jul 16 13:18:27 2020
 """
 
 import numpy as np
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from ray import tune
-from ray.util.sgd.utils import BATCH_SIZE
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 

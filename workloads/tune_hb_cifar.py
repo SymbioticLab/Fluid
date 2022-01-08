@@ -1,8 +1,5 @@
-import random
 from pathlib import Path
 
-import numpy as np
-import torch
 from ray import tune
 from ray.tune.schedulers.hb_bohb import HyperBandScheduler
 from ray.util.sgd.utils import BATCH_SIZE

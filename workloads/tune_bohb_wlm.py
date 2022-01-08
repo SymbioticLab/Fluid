@@ -1,8 +1,5 @@
-import random
 from pathlib import Path
 
-import numpy as np
-import torch
 from ray import tune
 from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.tune.suggest.bohb import TuneBOHB

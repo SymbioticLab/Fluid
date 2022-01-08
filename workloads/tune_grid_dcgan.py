@@ -3,7 +3,6 @@ from pathlib import Path
 from ray import tune
 
 import workloads.common as com
-from fluid.algo_random import VariantGenerator
 from fluid.trainer import TorchTrainer
 from workloads.common import dcgan as workload
 
@@ -50,7 +49,7 @@ def main():
 
     params = {
         # **com.run_options(__file__),
-        #'stop': workload.create_stopper(),
+        # 'stop': workload.create_stopper(),
         **setup_tune_scheduler(exp),
     }
 

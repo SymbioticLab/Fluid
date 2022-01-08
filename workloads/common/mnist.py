@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.optim as optim
 from ray import tune
 from ray.tune.examples.mnist_pytorch import ConvNet
-from ray.util.sgd.utils import BATCH_SIZE
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 

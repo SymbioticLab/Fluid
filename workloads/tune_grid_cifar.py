@@ -4,9 +4,7 @@ from ray import tune
 from ray.util.sgd.utils import BATCH_SIZE
 
 import workloads.common as com
-from fluid.algo_random import VariantGenerator
 from fluid.trainer import TorchTrainer
-from workloads import grid_search_space as space
 from workloads.common import cifar as workload
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()

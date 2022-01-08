@@ -1,11 +1,9 @@
 from pathlib import Path
 
 from ray import tune
-from ray.util.sgd.utils import BATCH_SIZE
 
 import workloads.common as com
 from fluid.trainer import TorchTrainer
-from workloads import grid_search_space as space
 from workloads.common import wlm as workload
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()

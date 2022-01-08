@@ -11,7 +11,6 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 from ray import tune
-from ray.util.sgd.utils import BATCH_SIZE
 
 import workloads.common as com
 from workloads.common import mnist_upgrade as workload

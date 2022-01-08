@@ -1,16 +1,10 @@
-import math
 import os
 import time
-from collections import OrderedDict
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
-import torchvision.transforms as transforms
-from ray import tune
 from torchvision import datasets, transforms
 
 import workloads.common as com
@@ -26,41 +20,41 @@ class VGG(nn.Module):
         super(VGG, self).__init__()
         self.conv = nn.Sequential(
             # Stage 1
-            # TODO: convolutional layer, input channels 3, output channels 8, filter size 3
+            # convolutional layer, input channels 3, output channels 8, filter size 3
             torch.nn.Conv2d(3, 8, 3, padding=1),
-            # TODO: max-pooling layer, size 2
+            # max-pooling layer, size 2
             torch.nn.MaxPool2d(2),
             # Stage 2
-            # TODO: convolutional layer, input channels 8, output channels 16, filter size 3
+            # convolutional layer, input channels 8, output channels 16, filter size 3
             torch.nn.Conv2d(8, 16, 3, padding=1),
-            # TODO: max-pooling layer, size 2
+            # max-pooling layer, size 2
             torch.nn.MaxPool2d(2),
             # Stage 3
-            # TODO: convolutional layer, input channels 16, output channels 32, filter size 3
+            # convolutional layer, input channels 16, output channels 32, filter size 3
             torch.nn.Conv2d(16, 32, 3, padding=1),
-            # TODO: convolutional layer, input channels 32, output channels 32, filter size 3
+            # convolutional layer, input channels 32, output channels 32, filter size 3
             torch.nn.Conv2d(32, 32, 3, padding=1),
-            # TODO: max-pooling layer, size 2
+            # max-pooling layer, size 2
             torch.nn.MaxPool2d(2),
             # Stage 4
-            # TODO: convolutional layer, input channels 32, output channels 64, filter size 3
+            # convolutional layer, input channels 32, output channels 64, filter size 3
             torch.nn.Conv2d(32, 64, 3, padding=1),
-            # TODO: convolutional layer, input channels 64, output channels 64, filter size 3
+            # convolutional layer, input channels 64, output channels 64, filter size 3
             torch.nn.Conv2d(64, 64, 3, padding=1),
-            # TODO: max-pooling layer, size 2
+            # max-pooling layer, size 2
             torch.nn.MaxPool2d(2),
             # Stage 5
-            # TODO: convolutional layer, input channels 64, output channels 64, filter size 3
+            # convolutional layer, input channels 64, output channels 64, filter size 3
             torch.nn.Conv2d(64, 64, 3, padding=1),
-            # TODO: convolutional layer, input channels 64, output channels 64, filter size 3
+            # convolutional layer, input channels 64, output channels 64, filter size 3
             torch.nn.Conv2d(64, 64, 3, padding=1),
-            # TODO: max-pooling layer, size 2
+            # max-pooling layer, size 2
             torch.nn.MaxPool2d(2),
         )
         self.fc = nn.Sequential(
-            # TODO: fully-connected layer (64->64)
-            # TODO: fully-connected layer (64->10)
+            # fully-connected layer (64->64)
             torch.nn.Linear(64, 64),
+            # fully-connected layer (64->10)
             torch.nn.Linear(64, 10),
         )
 
@@ -129,6 +123,7 @@ def data_creator(config):
         shuffle=False,
         pin_memory=True,
     )
+    return train_loader, val_loader
 
 
 # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html

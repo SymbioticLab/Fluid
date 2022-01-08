@@ -38,12 +38,14 @@ def init_ray():
     )
     logger.info("Init ray finished")
     for name in logging.root.manager.loggerDict:
-        l = logging.getLogger(name)
+        named_logger = logging.getLogger(name)
         if name.startswith("fluid") or name.startswith("workloads"):
-            l.setLevel(logging.DEBUG)
+            named_logger.setLevel(logging.DEBUG)
         else:
-            l.setLevel(logging.INFO)
-        logger.info(f"{name} at {logging.getLevelName(l.getEffectiveLevel())}")
+            named_logger.setLevel(logging.INFO)
+        logger.info(
+            f"{name} at {logging.getLevelName(named_logger.getEffectiveLevel())}"
+        )
 
     return args.exp, args.seed
 

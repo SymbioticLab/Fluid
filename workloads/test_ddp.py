@@ -5,35 +5,27 @@ Created on Sat Jun 20 22:49:12 2020
 
 @author: liujiachen
 """
+import warnings
 
+import matplotlib.style as style
+import ray
 import tensorflow as tf
+import torch
+import torch.optim as optim
+from hyperopt import hp
+from ray import tune
+from ray.tune.examples.mnist_pytorch import ConvNet, get_data_loaders, test, train
+from ray.tune.schedulers import ASHAScheduler
+from ray.tune.suggest.hyperopt import HyperOptSearch
+from torchvision import datasets
 
 try:
     tf.get_logger().setLevel("INFO")
 except Exception as exc:
     print(exc)
-import warnings
-
 warnings.simplefilter("ignore")
-
-import matplotlib.pyplot as plt
-import matplotlib.style as style
-import numpy as np
-import ray
-import torch
-import torch.optim as optim
-from hyperopt import hp
-from ray import tune
-from ray.tune import track
-from ray.tune.examples.mnist_pytorch import ConvNet, get_data_loaders, test, train
-from ray.tune.schedulers import ASHAScheduler, AsyncHyperBandScheduler
-from ray.tune.suggest.hyperopt import HyperOptSearch
-from torchvision import datasets
-
 style.use("ggplot")
-
 datasets.MNIST("~/data", train=True, download=True)
-import workloads.common as com
 
 
 def train_mnist(config):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
 from pathlib import Path
 
 from ray import tune
@@ -14,8 +15,6 @@ from workloads.common import cifar as workload
 
 DATA_PATH, RESULTS_PATH = com.detect_paths()
 EXP_NAME = com.remove_prefix(Path(__file__).stem, "tune_")
-
-import os
 
 
 def sched_algo():

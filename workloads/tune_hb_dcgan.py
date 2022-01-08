@@ -2,7 +2,6 @@ from pathlib import Path
 
 from ray import tune
 from ray.tune.schedulers.hyperband import HyperBandScheduler
-from ray.util.sgd.utils import BATCH_SIZE
 
 import workloads.common as com
 from fluid.algo_random import VariantGenerator

@@ -6,5 +6,4 @@ __pycache__
 *.txt
 ray_results
 setup.py
-setup.cfg
 dist/
