@@ -187,11 +187,6 @@ class TorchTrainer:
 
     """
 
-    # TODO: Implement autoscaling. If num_workers=-1, the trainer will use as
-    # many resources as available. Upon each train call, TorchTrainer will
-    # query the Ray global state for total available resources and resize
-    # its remote workers to consume all available resources.
-
     def __init__(
         self,
         *,

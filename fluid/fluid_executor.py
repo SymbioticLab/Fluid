@@ -7,6 +7,7 @@ import os
 import random
 import time
 import traceback
+import warnings
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -66,11 +67,20 @@ class FluidExecutor(TrialExecutor):
     def __init__(self, **kwargs):
         super().__init__(queue_trials=True)  # type: ignore
 
+        # whether in testing environment without GPU
+        self._fake_gpus = False
+
         # resources
         self._avail_resources = Resources(cpu=0, gpu=0)
         self._committed_resources = Resources(cpu=0, gpu=0)
         self._resources_initialized = False
         self._last_resource_refresh = float("-inf")
+        # list of trials that has resources committed
+        # this is usually those trials in jobs_running,
+        # but a trial may be only in _trials_running but not in jobs_running,
+        # because fetch_result was called on it.
+        # This is maintained solely by _commit_resources/_return_resources
+        self._trials_running: List[Trial] = set()
 
         # make sure our own GPU resources are created first in the cluster
         create_custom_gpu_res()
@@ -169,6 +179,9 @@ class FluidExecutor(TrialExecutor):
         self._dump_groups()
         # set of trials to consider
         A = {trial.trial_id for trial in self._trial_group(meta.grp)}
+        logger.debug(
+            f"_fluid: meta.perf.trials_missing_info={meta.perf.trials_missing_info} meta.trials={meta.trials}, meta.grp={meta.grp}, trial_groups={self.trial_groups}, A={A}"
+        )
         # assignment of resources
         W: Dict[str, Resources] = {}
         # compute new idle resources if every trials in this group were stopped
@@ -209,8 +222,8 @@ class FluidExecutor(TrialExecutor):
             #       \frac{1}{c}),
             #   d
             # )$$
-            c = 1 / 2  # TODO: calc c
-            d = 4  # TODO: calc d
+            c = 1 / 2
+            d = 4
             w = np.minimum(
                 np.maximum(np.floor(H1 * np.size(H1) / np.sum(H1)), 1 / c), d
             )
@@ -224,7 +237,7 @@ class FluidExecutor(TrialExecutor):
 
     def _ensure_W(self, W: Dict[str, Resources], meta: TrialGroupMeta):
         """Adjust group resources given in W"""
-        logger.debug(f"ensure_W: meta.trials={meta.trials}")
+        logger.debug(f"ensure_W: W={W} meta.trials={meta.trials}")
         # stop any trials with 0 res
         # this has to be done first to free up resources for others to use
         for trial_id, res in W.items():
@@ -233,31 +246,37 @@ class FluidExecutor(TrialExecutor):
                 # add to paused, then ensure_stop, we do not change trial's status which is visible outside
                 running = self._find_running(trial)
                 if running is not None:
+                    # don't call pause_trial, which will trigger another fluid reschedule
                     self.jobs_paused[running.in_flight_future] = running
-                    self._ensure_stop(running.trial)
-                else:
-                    trial.resources = res
-                    self.start_trial(trial)
+                self._ensure_stop(running.trial)
+                trial.resources = res
+                # add to pending
+                self.start_trial(trial)
         # adjust any trials with different res, including any not already running
         for trial_id, res in W.items():
             # use trial group to map trial_id to trial
             trial = self.trial_groups[trial_id].trial
 
             if res.cpu_total() + res.gpu_total() == 0:
+                # already handled in the loop above
                 continue
 
-            running = self._find_running(trial)
-            if running is not None and (
-                # trial.resources != res
+            if (
+                # current_res != res
                 Resources.subtract(trial.resources, res).is_nonnegative()
                 != Resources.subtract(res, trial.resources).is_nonnegative()
             ):
-                self.jobs_paused[running.in_flight_future] = running
-                self._ensure_stop(running.trial)
+                running = self._find_running(trial)
+                if running is not None:
+                    # don't call pause_trial, which will trigger another fluid reschedule
+                    self.jobs_paused[running.in_flight_future] = running
 
-            # construct PendingJob and use _kickoff to start the trial
-            pending = PendingJob(trial, None, True)
-            self._kickoff(pending, res)
+                self._ensure_stop(trial)
+
+            # at this point, the job is always stopped but not in the pending queue,
+            # because fluid clears the pending queue.
+            trial.resources = res
+            self._kickoff(PendingJob(trial, None, True), res)
 
     def _find_group(self, trial: Trial) -> TrialGroupMeta:
         return self.trial_group_meta[self.trial_groups[trial.trial_id].group]
@@ -280,6 +299,9 @@ class FluidExecutor(TrialExecutor):
         for _, job in self.jobs_running.items():
             if job.trial == trial:
                 return job
+        logger.debug(
+            f"Cloud not find running trial: {trial}, currently running ones are {[job for _, job in self.jobs_running.items()]}"
+        )
 
     def _find_pending(self, trial: Trial) -> Optional[PendingJob]:
         for job in self.jobs_pending:
@@ -296,7 +318,7 @@ class FluidExecutor(TrialExecutor):
 
         cls = ray.remote(
             num_cpus=res.cpu,
-            num_gpus=res.gpu,
+            num_gpus=0 if self._fake_gpus else res.gpu,
             memory=res.memory,
             object_store_memory=res.object_store_memory,
             resources=res.custom_resources,
@@ -335,12 +357,11 @@ class FluidExecutor(TrialExecutor):
         May return None if failed to start
         """
         trial = pending.trial
-        self._commit_resources(res)
-
         # this is needed for the Trainer to setup distributed training
         # TODO: figure what config key is also needed to set resource info
         trial.resources = res
 
+        self._commit_resources(trial)
         try:
             reuse_allowed = pending.checkpoint is not None or trial.has_checkpoint()
             runner = self._setup_remote_runner(trial, res, reuse_allowed)
@@ -382,6 +403,7 @@ class FluidExecutor(TrialExecutor):
                 stop_logger=True,
                 # NOTE that we don't return the resources, since they may have been lost.
                 release_resources=False,
+                update_status=True,
             )
 
     def _ensure_train(self, trial: Trial) -> RunningJob:
@@ -395,31 +417,40 @@ class FluidExecutor(TrialExecutor):
             fut = _LocalWrapper(fut)
         running = RunningJob(trial, fut)
         self.jobs_running[fut] = running
+        logger.debug(f"Set trial to running: {trial}, jobs_running={self.jobs_running}")
         return running
 
     def _ensure_stop(
-        self, trial, error=False, error_msg="", stop_logger=True, release_resources=True
+        self,
+        trial,
+        error=False,
+        error_msg="",
+        stop_logger=True,
+        release_resources=True,
+        update_status=False,
     ):
         """Stops the trial and its logger
         Handles any error
         """
+        logger.debug(f"_ensure_stop: trial.resources={trial.resources}")
         if stop_logger:
             trial.close_logger()
 
         prior_status = trial.status
-        self.set_status(trial, Trial.ERROR if error else Trial.TERMINATED)
         trial.set_location(Location())
+        if update_status:
+            self.set_status(trial, Trial.ERROR if error else Trial.TERMINATED)
 
         # remove from running
         in_flight = [j for _, j in self.jobs_running.items() if j.trial == trial]
         for j in in_flight:
             self.jobs_running.pop(j.in_flight_future)
-            if release_resources:
-                logger.debug("Trial %s: Returning resources.", trial)
-                self._return_resources(trial.resources)
         if in_flight:
             if prior_status not in [Trial.RUNNING, Trial.ERROR]:
                 assert False, "trial status invalid"
+        # release resources
+        if release_resources:
+            self._return_resources(trial)
 
         # remove from trial group
         # del self.trial_groups[trial.trial_id]
@@ -451,7 +482,7 @@ class FluidExecutor(TrialExecutor):
     def stop_trial(self, trial, error=False, error_msg=None, stop_logger=True):
         """Add to to-stop queue and reschedule"""
         logger.debug("stop_trial %s", trial)
-        self._ensure_stop(trial, error, error_msg, stop_logger)
+        self._ensure_stop(trial, error, error_msg, stop_logger, update_status=True)
         meta = self._find_group(trial)
         self._fluid(meta)
 
@@ -540,6 +571,13 @@ class FluidExecutor(TrialExecutor):
         return None
 
     def fetch_result(self, trial):
+        """
+        Note that this will remove the trial from running queue,
+        so actions must be taken later to either continue_training/stop/pause,
+        to maintain consistent system state.
+
+        This is usually called from the runner, knowning the the future for this trial is ready.
+        """
         running_job = self._find_running(trial)
         assert running_job, "Trial was not running"
         self.jobs_running.pop(running_job.in_flight_future)
@@ -675,11 +713,6 @@ class FluidExecutor(TrialExecutor):
     def cleanup(self):
         self._trial_cleanup.cleanup(partial=False)
 
-    def has_gpus(self):
-        if not self._resources_initialized:
-            self._update_avail_resources()
-        return self._avail_resources.gpu > 0
-
     def on_step_begin(self, trial_runner):
         """Before step() called, update the available resources."""
         self._update_avail_resources()
@@ -722,6 +755,16 @@ class FluidExecutor(TrialExecutor):
         )
         custom_resources = resources
 
+        if num_gpus == 0:
+            warnings.warn(
+                "No GPU resources found, assuming local test, using CPU resources instead"
+            )
+            # local test
+            num_gpus = num_cpus
+            self._fake_gpus = True
+        else:
+            self._fake_gpus = False
+
         avail_resources = Resources(
             int(num_cpus),
             int(num_gpus),
@@ -742,7 +785,10 @@ class FluidExecutor(TrialExecutor):
     def idle_resources(self) -> Resources:
         return Resources.subtract(self._avail_resources, self._committed_resources)
 
-    def _commit_resources(self, resources):
+    def _commit_resources(self, trial: Trial):
+        resources = trial.resources
+        self._trials_running.add(trial)
+
         committed = self._committed_resources
         all_keys = set(resources.custom_resources).union(
             set(committed.custom_resources)
@@ -759,8 +805,15 @@ class FluidExecutor(TrialExecutor):
             committed.object_store_memory + resources.object_store_memory_total(),
             custom_resources=custom_resources,
         )
+        logger.debug(f"Committed res={resources} -> {self._committed_resources}")
 
-    def _return_resources(self, resources):
+    def _return_resources(self, trial: Trial):
+        if trial not in self._trials_running:
+            return
+        logger.debug("Trial %s: Returning resources.", trial)
+        self._trials_running.remove(trial)
+        resources = trial.resources
+
         committed = self._committed_resources
 
         all_keys = set(resources.custom_resources).union(
@@ -778,7 +831,9 @@ class FluidExecutor(TrialExecutor):
 
         assert (
             self._committed_resources.is_nonnegative()
-        ), "Resource invalid: {}".format(resources)
+        ), "Resource invalid: {} - {} = {}".format(
+            committed, resources, self._committed_resources
+        )
 
     def on_no_available_trials(self, trial_runner):
         """This is called when we get all trial from a batch from the search algo"""
